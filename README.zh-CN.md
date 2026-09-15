@@ -98,6 +98,10 @@ Mac 微信 4.1.13 起，多选消息可以「转发到其他应用」，导出�
   <img src="docs/assets/screenshots/dark-confirm.png" width="640" alt="确认窗（深色）">
 </p>
 
+## 致谢
+
+感谢 [LINUX DO](https://linux.do/) 社区的支持与反馈。
+
 ## 许可
 
 [MIT](LICENSE) © 2026 zhanghang

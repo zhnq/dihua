@@ -98,6 +98,10 @@ Records are listed in Dihua's *History*; you can re-send, reveal in Finder, or d
   <img src="docs/assets/screenshots/dark-confirm.png" width="640" alt="Confirmation window, dark">
 </p>
 
+## Acknowledgements
+
+Thanks to the [LINUX DO](https://linux.do/) community for the support and feedback.
+
 ## License
 
 [MIT](LICENSE) © 2026 zhanghang

@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parseTranscript } from '../src/main/parse'
 import { buildWorkspace, renderTranscriptMarkdown, safeFolderName } from '../src/main/workspace'
-import { buildHandoffPrompt } from '../src/main/handoff'
+import { buildHandoffPrompt, normalizeDeliveryNote } from '../src/main/handoff'
 import type { JobSummary, Settings } from '../src/shared/types'
 
 const TXT = `项目群的聊天记录
@@ -129,6 +129,12 @@ describe('renderTranscriptMarkdown', () => {
 })
 
 describe('safeFolderName / handoff', () => {
+  it('trims optional notes and rejects malformed or oversized input', () => {
+    expect(normalizeDeliveryNote(undefined)).toBe('')
+    expect(normalizeDeliveryNote('  总结重点\n提取待办  ')).toBe('总结重点\n提取待办')
+    expect(() => normalizeDeliveryNote({ text: 'x' })).toThrow()
+    expect(() => normalizeDeliveryNote('x'.repeat(2001))).toThrow()
+  })
   it('去掉文件系统不允许的字符并截断', () => {
     expect(safeFolderName('项目/群:2026?')).toBe('项目 群 2026')
     expect(safeFolderName('')).toBe('聊天记录')
@@ -156,5 +162,6 @@ describe('safeFolderName / handoff', () => {
     expect(out).toContain('张航、清风明月，13 条，2026-09-07 23:53 至 2026-09-08 01:00，含 1 张图片')
     expect(out).toContain('媒体/')
     expect(out.endsWith('按我下面的要求处理：\n')).toBe(true)
+    expect(buildHandoffPrompt(job, undefined, '总结重点')).toMatch(/按我下面的要求处理：\n总结重点$/)
   })
 })

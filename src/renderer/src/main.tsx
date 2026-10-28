@@ -19,6 +19,8 @@ function Root(): React.JSX.Element {
     return window.dihua.theme.onChange(setDark)
   }, [])
 
+  useEffect(() => { document.documentElement.dataset.theme = dark ? 'dark' : 'light' }, [dark])
+
   return (
     <ConfigProvider locale={zhCN} theme={makeTheme(dark)}>
       <AntApp>

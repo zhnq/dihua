@@ -1,60 +1,82 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Alert, Button, Flex, Radio, Select, Space, Typography } from 'antd'
-import { ReloadOutlined } from '@ant-design/icons'
+import { Button, Input, Spin } from 'antd'
+import { CheckOutlined, CommentOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import type { CodexDestination, CodexThread } from '@shared/types'
 
-export default function CodexConversationPicker({ value, onChange, onReady, disabled = false, rememberedId = '' }: {
+function projectName(path: string): string {
+  return path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path
+}
+
+export default function CodexConversationPicker({ value, onChange, onReady, onThread, choosing, onChoosing, disabled = false }: {
   value: CodexDestination
   onChange: (value: CodexDestination) => void
   onReady: (ready: boolean) => void
+  onThread: (thread: CodexThread | undefined) => void
+  choosing: boolean
+  onChoosing: (choosing: boolean) => void
   disabled?: boolean
-  rememberedId?: string
 }): React.JSX.Element {
   const [threads, setThreads] = useState<CodexThread[]>([])
   const [selected, setSelected] = useState<CodexThread>()
   const [search, setSearch] = useState('')
   const [cursor, setCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [listError, setListError] = useState('')
+  const [selectionError, setSelectionError] = useState('')
   const [refresh, setRefresh] = useState(0)
+  const [active, setActive] = useState(0)
   const request = useRef(0)
+  const paging = useRef(false)
+  const input = useRef<React.ComponentRef<typeof Input>>(null)
   const existing = value.mode === 'existing'
   const threadId = existing ? value.threadId : ''
 
   useEffect(() => {
-    if (!existing) { onReady(true); return }
+    if (!choosing) return
+    setSearch('')
+    setActive(0)
+    input.current?.focus()
+  }, [choosing])
+
+  useEffect(() => {
+    if (!choosing) return
     const generation = ++request.current
+    setThreads([])
+    setCursor(null)
+    setLoading(true)
+    setListError('')
     const timer = setTimeout(() => {
-      setLoading(true)
-      setError('')
       void window.dihua.codex.threads({ search }).then((result) => {
         if (generation !== request.current) return
         if (result.ok) { setThreads(result.threads); setCursor(result.nextCursor) }
-        else { setThreads([]); setCursor(null); setError(result.error) }
+        else setListError(result.error)
       }).catch(() => {
-        if (generation === request.current) setError('读取会话失败，请刷新重试。')
+        if (generation === request.current) setListError('读取会话失败，请重试。')
       }).finally(() => { if (generation === request.current) setLoading(false) })
-    }, search ? 300 : 0)
+    }, search ? 250 : 0)
     return () => { clearTimeout(timer); ++request.current }
-  }, [existing, search, refresh, onReady])
+  }, [choosing, search, refresh])
 
   useEffect(() => {
-    if (!existing) { setSelected(undefined); onReady(true); return }
     setSelected(undefined)
+    setSelectionError('')
+    onThread(undefined)
+    if (!existing) { onReady(true); return }
     onReady(false)
-    if (!threadId) return
+    if (!threadId) { setSelectionError('请选择一个会话。'); return }
     let alive = true
     void window.dihua.codex.thread(threadId).then((result) => {
       if (!alive) return
-      if (result.ok) { setSelected(result.thread); onReady(true) }
-      else setError(result.error)
-    }).catch(() => { if (alive) setError('无法读取选中的会话，请重新选择。') })
+      if (result.ok) { setSelected(result.thread); onThread(result.thread); onReady(true) }
+      else setSelectionError(result.error)
+    }).catch(() => { if (alive) setSelectionError('无法读取这个会话，请更换目标或重试。') })
     return () => { alive = false }
-  }, [existing, threadId, refresh, onReady])
+  }, [existing, threadId, refresh, onReady, onThread])
 
   async function loadMore(): Promise<void> {
-    if (!cursor || loading) return
+    if (!cursor || loading || paging.current) return
+    paging.current = true
     const generation = request.current
     setLoading(true)
     try {
@@ -63,64 +85,69 @@ export default function CodexConversationPicker({ value, onChange, onReady, disa
       if (result.ok) {
         setThreads((current) => [...new Map([...current, ...result.threads].map((t) => [t.id, t])).values()])
         setCursor(result.nextCursor)
-      } else setError(result.error)
-    } catch { if (generation === request.current) setError('读取更多会话失败，请重试。') }
-    finally { if (generation === request.current) setLoading(false) }
+      } else setListError(result.error)
+    } catch { if (generation === request.current) setListError('读取更多会话失败，请重试。') }
+    finally { paging.current = false; if (generation === request.current) setLoading(false) }
   }
 
-  const options = [...new Map([...(selected ? [selected] : []), ...threads].map((t) => [t.id, t])).values()]
-  return <Space direction="vertical" style={{ width: '100%', marginTop: 12 }} size={10}>
-    <Radio.Group aria-label="Codex 会话" value={value.mode} disabled={disabled} onChange={(event) => {
-      onChange(event.target.value === 'existing'
-        ? { mode: 'existing', threadId: rememberedId, action: 'open' } : { mode: 'new' })
+  function choose(thread: CodexThread): void {
+    onReady(false)
+    // 再次选中当前会话时也重新验证，避免就绪状态一直停在 false。
+    setRefresh((n) => n + 1)
+    onChange({ mode: 'existing', threadId: thread.id, action: value.mode === 'existing' ? value.action : 'open' })
+    onChoosing(false)
+  }
+
+  function keyboard(event: React.KeyboardEvent): void {
+    if (event.nativeEvent.isComposing) return
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onChoosing(false) }
+    if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && threads.length) {
+      event.preventDefault()
+      const next = Math.max(0, Math.min(threads.length - 1, active + (event.key === 'ArrowDown' ? 1 : -1)))
+      setActive(next)
+      document.getElementById(`conversation-${next}`)?.scrollIntoView({ block: 'nearest' })
+    }
+    if (event.key === 'Enter' && !event.metaKey && threads[active]) { event.preventDefault(); choose(threads[active]) }
+  }
+
+  const current = selected?.id === threadId ? selected : undefined
+  if (!choosing) return <section className="recipient-section" aria-label="目标会话">
+    <h2>目标会话</h2>
+    <div className="recipient-row">
+      <span className="recipient-icon"><CommentOutlined /></span>
+      <div className="recipient-copy" aria-live="polite">
+        <strong title={current?.title}>{existing ? current?.title ?? (selectionError ? '会话暂不可用' : '正在读取会话…') : '新建 Codex 会话'}</strong>
+        <span title={current?.cwd}>{existing ? current ? `项目：${projectName(current.cwd)}` : '请选择可用的本地会话' : '在递话工作区中开始'}</span>
+      </div>
+      <Button type="link" disabled={disabled} onClick={() => onChoosing(true)}>更换</Button>
+    </div>
+    {selectionError && <div className="inline-error" role="alert">{selectionError} <button className="text-action" onClick={() => setRefresh((n) => n + 1)}>重试</button></div>}
+  </section>
+
+  return <section className="conversation-chooser">
+    <Input ref={input} autoFocus size="large" prefix={<SearchOutlined />} value={search} placeholder="搜索会话名称" aria-label="搜索 Codex 会话" aria-controls="conversation-list" aria-activedescendant={threads.length ? `conversation-${active}` : undefined} onKeyDown={keyboard} onChange={(event) => {
+      ++request.current
+      setThreads([])
+      setCursor(null)
+      setSearch(event.target.value)
+      setActive(0)
+      setLoading(true)
+    }} />
+    <div className="chooser-label"><span>{search ? '搜索结果' : '最近会话'}</span><Button type="text" size="small" icon={<ReloadOutlined />} aria-label="刷新会话" disabled={loading} onClick={() => setRefresh((n) => n + 1)} /></div>
+    <div id="conversation-list" className="conversation-list" role="listbox" aria-label="Codex 会话" aria-busy={loading} tabIndex={0} onKeyDown={keyboard} onScroll={(event) => {
+      const list = event.currentTarget
+      if (list.scrollHeight - list.scrollTop - list.clientHeight < 120) void loadMore()
     }}>
-      <Radio.Button value="new">新建会话</Radio.Button>
-      <Radio.Button value="existing">已有会话</Radio.Button>
-    </Radio.Group>
-    {existing && <>
-      <Flex gap={8}>
-        <Select
-          aria-label="选择已有 Codex 会话"
-          showSearch={{ filterOption: false, onSearch: setSearch }}
-          value={threadId || undefined}
-          onChange={(id) => onChange({ ...value, mode: 'existing', threadId: id })}
-          placeholder="搜索会话标题，或选择最近的会话"
-          loading={loading}
-          disabled={disabled}
-          style={{ flex: 1, minWidth: 0 }}
-          options={options.map((t) => ({ value: t.id, label: t.title }))}
-          optionRender={(option) => {
-            const thread = options.find((t) => t.id === option.value)
-            return <Flex vertical gap={2}>
-              <Typography.Text>{thread?.title ?? option.label}</Typography.Text>
-              <Typography.Text type="secondary" ellipsis style={{ fontSize: 12 }}>
-                {thread?.updatedAt ? `${dayjs.unix(thread.updatedAt).format('MM-DD HH:mm')} · ` : ''}{thread?.cwd}
-              </Typography.Text>
-            </Flex>
-          }}
-          notFoundContent={loading ? '正在读取会话…' : '没有找到会话，可更换搜索词或新建会话'}
-        />
-        <Button icon={<ReloadOutlined />} aria-label="刷新 Codex 会话" disabled={disabled || loading} onClick={() => setRefresh((n) => n + 1)} />
-      </Flex>
-      {cursor && <Button type="link" size="small" loading={loading} disabled={disabled} onClick={() => void loadMore()}>加载更多会话</Button>}
-      {selected && <Typography.Text type="secondary" style={{ fontSize: 12 }} ellipsis={{ tooltip: selected.cwd }}>
-        工作目录：{selected.cwd}
-      </Typography.Text>}
-      {error && <Alert type="warning" showIcon title={error} />}
-      <Radio.Group
-        aria-label="已有会话投递方式"
-        value={value.action}
-        disabled={disabled}
-        onChange={(event) => onChange({ ...value, action: event.target.value })}
-      >
-        <Space direction="vertical" size={4}>
-          <Radio value="open">打开会话并复制提示词，由我粘贴发送</Radio>
-          <Radio value="queue">直接发送并处理（实验）</Radio>
-        </Space>
-      </Radio.Group>
-      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        文字、图片和文件会复制到所选会话工作目录的 dihua-inbox/ 下，副本独立保留。下次会记住选择，投递前仍会询问。
-      </Typography.Text>
-    </>}
-  </Space>
+      {threads.map((thread, index) => <button key={thread.id} id={`conversation-${index}`} role="option" aria-selected={thread.id === threadId} tabIndex={-1} disabled={disabled} className={`conversation-option ${active === index ? 'keyboard-active' : ''}`} onMouseEnter={() => setActive(index)} onClick={() => choose(thread)}>
+        <CommentOutlined className="conversation-symbol" />
+        <span className="conversation-copy"><strong>{thread.title}</strong><small title={thread.cwd}>{projectName(thread.cwd)} · {dayjs.unix(thread.updatedAt).format('MM-DD HH:mm')}</small></span>
+        {thread.id === threadId && <CheckOutlined className="selection-check" />}
+      </button>)}
+      {loading && <div className="list-state" role="status"><Spin size="small" /><span>正在读取会话…</span></div>}
+      {!loading && !listError && !threads.length && <div className="list-state"><strong>没有找到会话</strong><span>{search ? '试试其他名称，或新建一个会话。' : '可以新建会话，或刷新重试。'}</span></div>}
+      {listError && <div className="list-state" role="alert"><span>{listError}</span><Button onClick={() => setRefresh((n) => n + 1)}>重试</Button></div>}
+      {cursor && !loading && <button className="text-action load-more" onClick={() => void loadMore()}>显示更多会话</button>}
+    </div>
+    <button className="new-conversation" disabled={disabled} onClick={() => { onChange({ mode: 'new' }); onChoosing(false) }}><PlusOutlined />新建会话</button>
+  </section>
 }

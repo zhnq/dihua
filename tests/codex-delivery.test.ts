@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { JobSummary } from '../src/shared/types'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 const mock = vi.hoisted(() => ({
   getJob: vi.fn(), getSettings: vi.fn(), upsertJob: vi.fn(), updateSettings: vi.fn(),
@@ -18,7 +21,7 @@ vi.mock('../src/main/targets/registry', () => ({ getTarget: () => ({
   id: 'codex', name: 'Codex', capabilities: { attachments: 'workspace' },
   detect: async () => ({ available: true }), deliver: mock.deliver,
 }) }))
-import { deliverJob } from '../src/main/jobs'
+import { copyLastPrompt, deliverJob, reopenDeliveredTarget } from '../src/main/jobs'
 
 const ID = '11111111-2222-4333-8444-555555555555'
 beforeEach(() => {
@@ -32,6 +35,34 @@ beforeEach(() => {
 })
 
 describe('delivery outcomes', () => {
+  it('clears the old destination when a previously delivered batch is sent to a new conversation', async () => {
+    const inbox = mkdtempSync(join(tmpdir(), 'dihua-redeliver-'))
+    try {
+      mock.getJob.mockReturnValue({ id: 'job', inboxDir: inbox, inboxRelPath: 'inbox/test', workspaceRoot: inbox, title: '测试', counts: { messages: 1 }, deliveredThreadId: ID, deliveredThreadName: '旧会话', deliveredDirectory: '/old' })
+      const result = await deliverJob('job', { targetId: 'codex', codex: { mode: 'new' }, note: '本次要求' })
+      expect(result.ok).toBe(true)
+      expect(mock.upsertJob).toHaveBeenCalledWith(expect.objectContaining({ deliveredThreadId: undefined, deliveredThreadName: undefined, deliveredDirectory: undefined, lastPrompt: expect.stringContaining('本次要求') }))
+      expect(mock.queue).not.toHaveBeenCalled()
+    } finally { rmSync(inbox, { recursive: true, force: true }) }
+  })
+  it('validates an overlong note before copying, opening or queueing anything', async () => {
+    const result = await deliverJob('job', { targetId: 'codex', note: '长'.repeat(2001), codex: { mode: 'existing', threadId: ID, action: 'open' } })
+    expect(result.ok).toBe(false)
+    expect(mock.copy).not.toHaveBeenCalled()
+    expect(mock.openExternal).not.toHaveBeenCalled()
+    expect(mock.queue).not.toHaveBeenCalled()
+  })
+
+  it('copy and reopen recovery actions never resend or create a conversation', async () => {
+    mock.getJob.mockReturnValue({ lastPrompt: '已有提示词', deliveredTo: 'codex', deliveredThreadId: ID })
+    copyLastPrompt('job')
+    await reopenDeliveredTarget('job')
+    expect(mock.writeText).toHaveBeenCalledExactlyOnceWith('已有提示词')
+    expect(mock.openExternal).toHaveBeenCalledExactlyOnceWith(`codex://threads/${ID}`)
+    expect(mock.queue).not.toHaveBeenCalled()
+    expect(mock.deliver).not.toHaveBeenCalled()
+    expect(mock.copy).not.toHaveBeenCalled()
+  })
   it('opens exactly the selected thread and copies text without starting a turn', async () => {
     const result = await deliverJob('job', { targetId: 'codex', rememberSkipConfirm: true, codex: { mode: 'existing', threadId: ID, action: 'open' } })
     expect(result).toMatchObject({ ok: true, status: 'prepared' })

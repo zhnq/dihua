@@ -1,13 +1,14 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electron'
 import type { AppInfo, DeliverOptions, Settings } from '@shared/types'
 import { openExtensionsSettings, setShareEntryEnabled, shareEntriesInfo, shareEntryState, syncShareEntries } from './entries'
-import { cancelJob, clearHistory, deleteJob, deliverJob, getJobDetail, handoffPromptFor, historyStats, importZip, revealJob } from './jobs'
+import { cancelJob, clearHistory, copyLastPrompt, deleteJob, deliverJob, getJobDetail, handoffPromptFor, historyStats, importZip, reopenDeliveredTarget, revealJob } from './jobs'
+import { attachmentFile, readJobContent } from './jobContent'
 import { appVersion } from './paths'
-import { getSettings, listHistory, readUpdateCache, updateSettings } from './store'
+import { getJob, getSettings, listHistory, readUpdateCache, updateSettings } from './store'
 import { describeTargets, setTargetEnabled } from './targets/registry'
 import { ownWeChatAvatar } from './wechatAvatar'
 import { checkForUpdates } from './update'
-import { showConfirmWindow, showMainWindow } from './windows'
+import { resizeConfirmWindow, showConfirmWindow, showMainWindow } from './windows'
 import { ensureWorkspaceRoot } from './workspace'
 import log from './log'
 import { getCodexThread, listCodexThreads } from './codex'
@@ -23,6 +24,17 @@ export function registerIpc(): void {
   ipcMain.handle('theme:isDark', () => nativeTheme.shouldUseDarkColors)
 
   ipcMain.handle('job:get', (_e, id: string) => getJobDetail(id))
+  ipcMain.handle('job:content', (_e, id: string) => {
+    const job = getJob(id)
+    return job ? readJobContent(job) : undefined
+  })
+  ipcMain.handle('job:revealAttachment', (_e, id: string, path: string) => {
+    const job = getJob(id)
+    if (!job) throw new Error('找不到这批记录')
+    shell.showItemInFolder(attachmentFile(job, path))
+  })
+  ipcMain.handle('job:copyPrompt', (_e, id: string) => copyLastPrompt(id))
+  ipcMain.handle('job:reopenTarget', (_e, id: string) => reopenDeliveredTarget(id))
   ipcMain.handle('job:prompt', (_e, id: string, targetId: string) => handoffPromptFor(id, targetId))
   ipcMain.handle('job:deliver', (_e, id: string, opts: DeliverOptions) => deliverJob(id, opts))
   ipcMain.handle('job:cancel', (_e, id: string) => cancelJob(id))
@@ -106,6 +118,7 @@ export function registerIpc(): void {
   })
   ipcMain.handle('shell:openPath', (_e, p: string) => shell.openPath(p))
   ipcMain.handle('window:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close())
+  ipcMain.handle('window:confirmView', (e, view: string) => resizeConfirmWindow(BrowserWindow.fromWebContents(e.sender), view))
   ipcMain.handle('window:showMain', (_e, route?: string) => {
     showMainWindow(route)
   })

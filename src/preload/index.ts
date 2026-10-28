@@ -7,6 +7,7 @@ import type {
   DeliverResult,
   HistoryStats,
   JobDetail,
+  JobContent,
   JobSummary,
   Settings,
   ShareEntriesInfo,
@@ -28,6 +29,7 @@ const api = {
     openPath: (p: string): Promise<string> => ipcRenderer.invoke('shell:openPath', p),
     showMain: (route?: string): Promise<void> => ipcRenderer.invoke('window:showMain', route),
     closeWindow: (): Promise<void> => ipcRenderer.invoke('window:close'),
+    confirmView: (view: 'compact' | 'conversation' | 'content' | 'options' | 'done'): Promise<void> => ipcRenderer.invoke('window:confirmView', view),
     onNav: (cb: (route: string) => void) => on('nav', (r) => cb(r as string)),
   },
   theme: {
@@ -40,6 +42,10 @@ const api = {
   },
   jobs: {
     get: (id: string): Promise<JobDetail | undefined> => ipcRenderer.invoke('job:get', id),
+    content: (id: string): Promise<JobContent | undefined> => ipcRenderer.invoke('job:content', id),
+    revealAttachment: (id: string, path: string): Promise<void> => ipcRenderer.invoke('job:revealAttachment', id, path),
+    copyPrompt: (id: string): Promise<void> => ipcRenderer.invoke('job:copyPrompt', id),
+    reopenTarget: (id: string): Promise<void> => ipcRenderer.invoke('job:reopenTarget', id),
     /** 递给某个目标时会带的上下文；目标不同措辞不同 */
     prompt: (id: string, targetId: string): Promise<string | undefined> => ipcRenderer.invoke('job:prompt', id, targetId),
     deliver: (id: string, opts: DeliverOptions): Promise<DeliverResult> => ipcRenderer.invoke('job:deliver', id, opts),

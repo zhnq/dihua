@@ -96,6 +96,20 @@ export interface JobDetail extends JobSummary {
   handoffPrompt: string
 }
 
+export interface ContentAttachment {
+  path: string
+  name: string
+  kind: 'image' | 'video' | 'file'
+  bytes: number
+  thumbnail?: string
+}
+
+export interface JobContent {
+  messages: Array<Omit<ChatMessage, 'children'> & { depth: number }>
+  attachments: ContentAttachment[]
+  truncated: boolean
+}
+
 export interface TargetCapabilities {
   autoSend: boolean
   /** workspace：目标能读本地目录，只递路径；inline：把 transcript.md 与媒体作为附件交给目标 */
@@ -168,6 +182,8 @@ export interface DeliverOptions {
   targetId: string
   rememberSkipConfirm?: boolean
   codex?: CodexDestination
+  /** 仅附在本次交接提示词中，不保存为默认任务 */
+  note?: string
 }
 
 export type DeliverResult =

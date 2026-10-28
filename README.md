@@ -56,6 +56,12 @@ WeChat for Mac (4.1.13+) can forward a batch of messages to "other apps" as a zi
 
 Prefer zero clicks? Enable **Send directly** and the forward menu lists each target on its own — *Send to ChatGPT*, *Send to Claude*, *Send to Gemini* — with no confirmation window in between.
 
+## Transfer confirmation
+
+The compact confirmation window keeps the source summary and destination visible, with content preview, conversation search, optional notes and transfer options available on demand. Choose a recent or existing Codex conversation, or start a new one. Use arrow keys and Return in search, Escape to return, and Command-Return to hand off from the note field.
+
+Existing conversations default to copying the prompt and opening the selected conversation for you to paste, review and send. Experimental direct queue submission is in Transfer Options. Persistent feedback distinguishes prepared from queued; copying again and reopening the destination do not resubmit. Notes apply to this handoff only. Content preview preserves nesting and shows real attachments; locate an attachment in Finder and press Space for Quick Look.
+
 ## Nested chat records
 
 Indented chat records inside forwarded messages are parsed recursively. `transcript.md` preserves the forwarding hierarchy, inner timestamps and speakers as block quotes, with links to inner images and files.

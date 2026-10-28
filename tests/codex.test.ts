@@ -97,6 +97,7 @@ describe('existing-thread delivery', () => {
     expect(prompt).toContain('dihua-inbox/wechat-')
     expect(prompt).toContain('实际查看')
     expect(prompt).toContain('嵌套聊天记录')
+    expect(existingThreadPrompt(job, directory, cwd, '提取待办')).toContain('用户对本批记录的要求：\n提取待办')
     expect(prompt).not.toContain(job.inboxDir)
   })
 

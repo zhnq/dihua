@@ -14,7 +14,7 @@ import { basename, join } from 'node:path'
 import { clipboard, shell } from 'electron'
 import type { ChatMessage, DeliverOptions, DeliverResult, HistoryStats, JobDetail, JobSummary } from '@shared/types'
 import { extractZip, isZipFile } from './extract'
-import { buildHandoffPrompt } from './handoff'
+import { buildHandoffPrompt, normalizeDeliveryNote } from './handoff'
 import { locateTranscript, parseTranscript } from './parse'
 import { buildWorkspace, ensureWorkspaceRoot } from './workspace'
 import { getJob, getSettings, listHistory, removeJob, replaceHistory, updateSettings, upsertJob } from './store'
@@ -184,6 +184,9 @@ function previewFromTranscript(md: string, limit = 120): ChatMessage[] {
 }
 
 export async function deliverJob(id: string, opts: DeliverOptions): Promise<DeliverResult> {
+  let note: string
+  try { note = normalizeDeliveryNote(opts.note) }
+  catch (error) { return { ok: false, error: (error as Error).message } }
   const job = getJob(id)
   if (!job) return { ok: false, error: '找不到这条记录' }
   if (!existsSync(job.inboxDir)) return { ok: false, error: '工作区目录已不存在，请重新从微信递一次' }
@@ -200,7 +203,7 @@ export async function deliverJob(id: string, opts: DeliverOptions): Promise<Deli
       // Resolve again at delivery time. Never accept a workspace path supplied by the renderer.
       const thread = await getCodexThread(destination.threadId)
       const directory = copyBatchToThread(job, thread.cwd)
-      const prompt = existingThreadPrompt(job, directory, thread.cwd)
+      const prompt = existingThreadPrompt(job, directory, thread.cwd, note)
       const url = `codex://threads/${thread.id}`
       if (destination.action === 'queue') {
         await queueCodexMessage(thread.id, prompt)
@@ -226,7 +229,7 @@ export async function deliverJob(id: string, opts: DeliverOptions): Promise<Deli
     }
   }
 
-  const { prompt, attachments } = handoffFor(job, target)
+  const { prompt, attachments } = handoffFor(job, target, note)
   try {
     writeFileSync(join(job.inboxDir, 'prompt.md'), prompt, 'utf8')
   } catch (err) {
@@ -247,25 +250,49 @@ export async function deliverJob(id: string, opts: DeliverOptions): Promise<Deli
     status: 'delivered',
     deliveredTo: target.id,
     deliveredAt: new Date().toISOString(),
+    deliveredThreadId: undefined,
+    deliveredThreadName: undefined,
+    deliveredDirectory: undefined,
     lastPrompt: prompt,
     error: undefined,
   })
   if (opts.rememberSkipConfirm) updateSettings({ skipConfirm: true, defaultTargetId: target.id })
   if (target.id === 'codex') updateSettings({ codexDestination: 'new' })
   log.info(`[deliver] ${id} → ${target.id} ok`)
-  return { ok: true, prompt, targetName: detected.appName ?? target.name, nextStep: target.nextStep }
+  return { ok: true, prompt, targetName: target.id === 'codex' ? 'Codex' : detected.appName ?? target.name, nextStep: target.nextStep }
 }
 
 /**
  * 按目标的能力决定提示词与随行文件：
  *   workspace：只说路径；inline：先定下带哪些文件，提示词里说清附件里有什么。
  */
-function handoffFor(job: JobSummary, target: Target): { prompt: string; attachments: string[] } {
+function handoffFor(job: JobSummary, target: Target, note = ''): { prompt: string; attachments: string[] } {
   if (target.capabilities.attachments === 'inline') {
     const plan = existsSync(job.inboxDir) ? planAttachments(job.inboxDir) : undefined
-    return { prompt: buildHandoffPrompt(job, plan), attachments: plan?.files ?? [] }
+    return { prompt: buildHandoffPrompt(job, plan, note), attachments: plan?.files ?? [] }
   }
-  return { prompt: buildHandoffPrompt(job), attachments: [] }
+  return { prompt: buildHandoffPrompt(job, undefined, note), attachments: [] }
+}
+
+export function copyLastPrompt(id: string): void {
+  const job = getJob(id)
+  if (!job?.lastPrompt) throw new Error('还没有可复制的交接内容。')
+  clipboard.writeText(job.lastPrompt)
+}
+
+/** 只返回已投递的目标，不创建新会话，也不重新发送。 */
+export async function reopenDeliveredTarget(id: string): Promise<void> {
+  const job = getJob(id)
+  if (!job?.deliveredTo) throw new Error('还没有目标应用。')
+  if (job.deliveredTo === 'codex' && job.deliveredThreadId) {
+    if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(job.deliveredThreadId)) throw new Error('目标会话无效。')
+    await shell.openExternal(`codex://threads/${job.deliveredThreadId}`)
+    return
+  }
+  const detected = await getTarget(job.deliveredTo)?.detect()
+  if (!detected?.appPath) throw new Error('无法打开目标应用，请从 Dock 打开。')
+  const error = await shell.openPath(detected.appPath)
+  if (error) throw new Error(error)
 }
 
 /** 确认窗预览用：这份记录递给某个目标时会带的上下文（不同目标措辞不同） */

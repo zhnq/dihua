@@ -56,6 +56,14 @@ WeChat for Mac (4.1.13+) can forward a batch of messages to "other apps" as a zi
 
 Prefer zero clicks? Enable **Send directly** and the forward menu lists each target on its own — *Send to ChatGPT*, *Send to Claude*, *Send to Gemini* — with no confirmation window in between.
 
+## Nested chat records
+
+Indented chat records inside forwarded messages are parsed recursively. `transcript.md` preserves the forwarding hierarchy, inner timestamps and speakers as block quotes, with links to inner images and files.
+
+The main message count covers the outer level; inner messages are counted separately. `transcript.json` stores the structured result and `meta.json` includes nesting statistics. Placeholders, mismatched inner counts and the 16-level parsing limit are reported, with exported source text retained. Content absent from WeChat's export cannot be recovered; open that record in WeChat and forward its internal messages separately. Recognizing the format does not establish content completeness.
+
+The fix applies to newly imported batches; existing batches are not rewritten automatically.
+
 ## Supported targets
 
 | Target | How the record arrives |

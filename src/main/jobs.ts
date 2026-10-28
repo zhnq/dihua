@@ -15,7 +15,7 @@ import { clipboard, shell } from 'electron'
 import type { ChatMessage, DeliverOptions, DeliverResult, HistoryStats, JobDetail, JobSummary } from '@shared/types'
 import { extractZip, isZipFile } from './extract'
 import { buildHandoffPrompt } from './handoff'
-import { classifyMedia, locateTranscript, parseTranscript } from './parse'
+import { locateTranscript, parseTranscript } from './parse'
 import { buildWorkspace, ensureWorkspaceRoot } from './workspace'
 import { getJob, getSettings, listHistory, removeJob, replaceHistory, updateSettings, upsertJob } from './store'
 import { planAttachments } from './targets/attachments'
@@ -63,7 +63,7 @@ export async function importZip(sourcePath: string, source: JobSource, options: 
     extracted.map((f) => f.relPath),
     sizes,
   )
-  const mediaNames = extracted.map((f) => basename(f.relPath)).filter((n) => classifyMedia(n) !== 'other')
+  const mediaNames = extracted.filter((f) => f.relPath !== txtRel).map((f) => f.relPath)
   const fallbackTitle = sourceZipName.replace(/\.zip$/i, '').replace(/^(聊天记录|聊天記錄|Chat History)_?/i, '') || '聊天记录'
   const transcript = txtRel
     ? parseTranscript({
@@ -109,6 +109,7 @@ export async function importZip(sourcePath: string, source: JobSource, options: 
     timeRange: transcript.timeRange,
     parseConfidence: transcript.parseConfidence,
     format: transcript.format,
+    nested: transcript.nested,
     status: 'pending',
   }
   upsertJob(job)
@@ -128,7 +129,16 @@ export function getJobDetail(id: string): JobDetail | undefined {
     /* 目录可能已被删除 */
   }
   try {
-    preview = previewFromTranscript(readFileSync(join(job.inboxDir, 'transcript.md'), 'utf8'))
+    const structured = join(job.inboxDir, 'transcript.json')
+    if (existsSync(structured)) {
+      const transcript = JSON.parse(readFileSync(structured, 'utf8')) as { messages: ChatMessage[] }
+      preview = transcript.messages.slice(0, 120).map((m) => {
+        const text = m.kind === 'nested'
+          ? m.nestedStatus === 'expanded' || m.nestedStatus === 'partial' ? `[聊天记录] 已识别 ${m.children?.length ?? 0} 条内层消息（保留层级，见 transcript.md）` : '[聊天记录] 未能展开，见内容提示'
+          : m.text
+        return { index: m.index, sender: m.sender, time: m.time, kind: m.kind, text, raw: '' }
+      })
+    } else preview = previewFromTranscript(readFileSync(join(job.inboxDir, 'transcript.md'), 'utf8'))
   } catch {
     /* ignore */
   }

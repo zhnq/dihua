@@ -16,9 +16,23 @@ export interface ChatMessage {
   sender?: string
   kind: MessageKind
   text: string
-  /** 媒体/ 下的文件名（占位符成功关联到真实文件时） */
+  /** 解析时关联的源文件路径 */
   mediaFile?: string
+  /** 整理后相对于本批目录的附件路径 */
+  attachmentPath?: string
+  /** 转发记录的内部消息；保留父子关系和各自的时间、发言人 */
+  children?: ChatMessage[]
+  nestedStatus?: 'expanded' | 'partial' | 'unavailable' | 'depth-limit'
+  nestedPreamble?: string
+  nestedDeclaredCount?: number
   raw: string
+}
+
+export interface NestedSummary {
+  records: number
+  /** 所有内层消息数（包含更深层的转发容器） */
+  messages: number
+  unresolved: number
 }
 
 export type ParseConfidence = 'high' | 'medium' | 'low'
@@ -45,6 +59,8 @@ export interface Transcript {
   txtFileName?: string
   /** 尾行声明的条数（若有） */
   declaredCount?: number
+  preamble?: string
+  nested?: NestedSummary
 }
 
 export type JobStatus = 'pending' | 'delivered' | 'prepared' | 'queued' | 'cancelled' | 'failed'
@@ -62,6 +78,7 @@ export interface JobSummary {
   timeRange?: { start: string; end: string }
   parseConfidence: ParseConfidence
   format: LineFormat
+  nested?: NestedSummary
   status: JobStatus
   deliveredTo?: string
   deliveredAt?: string

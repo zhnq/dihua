@@ -87,6 +87,36 @@ describe('buildWorkspace', () => {
     })
     expect(res.inboxRelPath).toBe(join('inbox', '20260907-231000-项目群-2'))
   })
+
+  it('嵌套图文和文件生成可读取链接，重名图片重命名后仍关联正确副本', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'dihua-nested-ws-'))
+    const work = mkdtempSync(join(tmpdir(), 'dihua-nested-work-'))
+    const text = '·外层\n2026年10月28日 13:00\n[聊天记录]\n\n' +
+      '    ·内层\n    2026年10月28日 12:00\n    [图片] a/x.png\n\n' +
+      '    ·内层\n    2026年10月28日 12:01\n    [图片] b/x.png\n\n' +
+      '    ·内层\n    2026年10月28日 12:02\n    [文件] 资料(最终)#1.txt\n'
+    const paths = ['聊天记录.txt', 'a/x.png', 'b/x.png', '附件/资料(最终)#1.txt']
+    const contents = [text, '图片一', '图片二', '附件校验内容']
+    const extracted = paths.map((relPath, i) => {
+      const absPath = join(work, relPath)
+      mkdirSync(join(absPath, '..'), { recursive: true })
+      writeFileSync(absPath, contents[i])
+      return { relPath, absPath, size: Buffer.byteLength(contents[i]) }
+    })
+    const transcript = parseTranscript({ text, mediaFiles: paths.slice(1), fallbackTitle: '测试', txtFileName: '聊天记录.txt' })
+    const result = await buildWorkspace({ jobId: 'nested', createdAt: new Date(), settings: { ...settingsIn(root), keepOriginalZip: false }, transcript, extracted, txtRelPath: paths[0], sourceZipPath: '/unused.zip', sourceZipName: 'nested.zip' })
+    const md = readFileSync(join(result.inboxDir, 'transcript.md'), 'utf8')
+    const links = [...md.matchAll(/\]\(([^)]+)\)/g)].map((match) => decodeURIComponent(match[1]))
+    expect(links).toHaveLength(3)
+    expect(links.slice(0, 2)).toEqual(['媒体/x.png', '媒体/x-2.png'])
+    expect(links.map((path) => readFileSync(join(result.inboxDir, path), 'utf8'))).toEqual(contents.slice(1))
+    const structured = JSON.parse(readFileSync(join(result.inboxDir, 'transcript.json'), 'utf8'))
+    expect(structured.messages).toHaveLength(1)
+    expect(structured.messages[0].children).toHaveLength(3)
+    expect(structured.messages[0].children[1].attachmentPath).toBe('媒体/x-2.png')
+    const meta = JSON.parse(readFileSync(join(result.inboxDir, 'meta.json'), 'utf8'))
+    expect(meta.nested).toEqual({ records: 1, messages: 3, unresolved: 0 })
+  })
 })
 
 describe('renderTranscriptMarkdown', () => {

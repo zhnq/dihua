@@ -1,5 +1,5 @@
 import { basename, extname } from 'node:path'
-import type { ChatMessage, LineFormat, MessageKind, ParseConfidence, Transcript, TranscriptCounts } from '@shared/types'
+import type { ChatMessage, LineFormat, MessageKind, NestedSummary, ParseConfidence, Transcript, TranscriptCounts } from '@shared/types'
 
 const TXT_CANDIDATES = ['聊天记录.txt', '聊天記錄.txt', 'chat history.txt']
 
@@ -55,34 +55,60 @@ interface HeaderHit {
   who: string
   /** 该行头占用的行数（block 格式为 2） */
   span: number
+  indent: number
+}
+
+/** 微信用四个空格表示一层转发；同时兼容制表符和全角空格。 */
+function indentation(line: string): number {
+  let width = 0
+  for (const ch of line) {
+    if (ch === ' ') width += 1
+    else if (ch === '\t') width += 4 - width % 4
+    else if (ch === '\u3000') width += 2
+    else break
+  }
+  return width
+}
+
+function stripIndent(line: string, width: number): string {
+  let end = 0
+  let removed = 0
+  while (end < line.length) {
+    const ch = line[end]
+    const step = ch === ' ' ? 1 : ch === '\t' ? 4 - removed % 4 : ch === '\u3000' ? 2 : 0
+    if (!step || removed + step > width) break
+    removed += step
+    end += 1
+  }
+  return line.slice(end)
 }
 
 function matchSingleLineHeader(line: string): HeaderHit | null {
-  let m = TIME_FIRST.exec(line)
-  if (m?.groups) return { format: 'time-first', time: m.groups.t, who: m.groups.who.trim(), span: 1 }
-  m = NAME_FIRST.exec(line)
-  if (m?.groups) return { format: 'name-first', time: m.groups.t, who: m.groups.who.trim(), span: 1 }
+  let m = TIME_FIRST.exec(line.trim())
+  if (m?.groups) return { format: 'time-first', time: m.groups.t, who: m.groups.who.trim(), span: 1, indent: indentation(line) }
+  m = NAME_FIRST.exec(line.trim())
+  if (m?.groups) return { format: 'name-first', time: m.groups.t, who: m.groups.who.trim(), span: 1, indent: indentation(line) }
   return null
 }
 
 function matchBlockHeader(line: string, next: string | undefined): HeaderHit | null {
   if (next === undefined || !TIME_LINE.test(next.trim())) return null
+  if (indentation(line) !== indentation(next)) return null
   const trimmed = line.trim()
   if (!trimmed || TIME_LINE.test(trimmed)) return null
   const m = SENDER_LINE.exec(trimmed)
   if (!m?.groups) return null
   const t = TIME_LINE.exec(next.trim())
-  return { format: 'block', time: t!.groups!.t, who: m.groups.who.trim(), span: 2 }
+  return { format: 'block', time: t!.groups!.t, who: m.groups.who.trim(), span: 2, indent: indentation(line) }
 }
 
 function matchHeader(lines: string[], i: number, format: LineFormat | 'any'): HeaderHit | null {
-  const line = lines[i].trim()
   if (format === 'block' || format === 'any') {
     const hit = matchBlockHeader(lines[i], lines[i + 1])
     if (hit) return hit
     if (format === 'block') return null
   }
-  const single = matchSingleLineHeader(line)
+  const single = matchSingleLineHeader(lines[i])
   if (!single) return null
   if (format === 'any' || single.format === format) return single
   return null
@@ -106,7 +132,8 @@ function classifyBody(text: string, mediaIndex: Map<string, string>): { kind: Me
     const k = media.groups.k.toLowerCase()
     const kind: MessageKind = /图片|圖片|image|photo/.test(k) ? 'image' : /视频|視頻|video/.test(k) ? 'video' : 'file'
     const name = media.groups.name.trim()
-    const hit = name ? (mediaIndex.get(name.toLowerCase()) ?? mediaIndex.get(basename(name).toLowerCase())) : undefined
+    const key = name.replace(/\\/g, '/').toLowerCase()
+    const hit = name ? (mediaIndex.get(key) ?? mediaIndex.get(basename(key))) : undefined
     return { kind, mediaFile: hit }
   }
   for (const [re, kind] of OTHER_PLACEHOLDER) if (re.test(first)) return { kind }
@@ -115,26 +142,43 @@ function classifyBody(text: string, mediaIndex: Map<string, string>): { kind: Me
 
 export interface ParseInput {
   text: string
-  /** 媒体文件 basename 列表（解压得到） */
+  /** 解压得到的附件相对路径；同时支持仅传 basename 的旧调用 */
   mediaFiles: string[]
   fallbackTitle: string
   txtFileName?: string
 }
 
 export function parseTranscript(input: ParseInput): Transcript {
+  return parseLevel(input, 0)
+}
+
+export const MAX_NESTED_DEPTH = 16
+
+function parseLevel(input: ParseInput, depth: number): Transcript {
   const rawText = input.text.replace(/^﻿/, '')
   const lines = rawText.split(/\r\n|\r|\n/)
   const mediaIndex = new Map<string, string>()
-  for (const f of input.mediaFiles) mediaIndex.set(basename(f).toLowerCase(), basename(f))
+  const byBase = new Map<string, string[]>()
+  for (const f of input.mediaFiles) {
+    const key = f.replace(/\\/g, '/').toLowerCase()
+    mediaIndex.set(key, f)
+    const name = basename(key)
+    byBase.set(name, [...(byBase.get(name) ?? []), f])
+  }
+  // 同名附件无法仅凭 basename 判定，宁可保留占位符，也不关联到错误文件。
+  for (const [name, paths] of byBase) if (paths.length === 1) mediaIndex.set(name, paths[0])
 
   // 1) 投票决定行头格式
   const votes: Record<Exclude<LineFormat, 'unknown'>, number> = { block: 0, 'time-first': 0, 'name-first': 0 }
-  let sampled = 0
-  for (let i = 0; i < lines.length && sampled < 40; i++) {
+  let baseIndent = Infinity
+  for (let i = 0; i < lines.length; i++) {
     const hit = matchHeader(lines, i, 'any')
     if (hit) {
-      votes[hit.format] += 1
-      sampled += 1
+      if (hit.indent < baseIndent) {
+        baseIndent = hit.indent
+        votes.block = votes['time-first'] = votes['name-first'] = 0
+      }
+      if (hit.indent === baseIndent) votes[hit.format] += 1
       if (hit.span === 2) i += 1
     }
   }
@@ -150,9 +194,9 @@ export function parseTranscript(input: ParseInput): Transcript {
 
   const flush = () => {
     if (!current) return
-    const text = current.body.join('\n').trim()
+    const text = current.body.map((line) => stripIndent(line, baseIndent)).join('\n').trim()
     const cls = classifyBody(text, mediaIndex)
-    messages.push({
+    const message: ChatMessage = {
       index: messages.length,
       time: current.time,
       sender: current.who,
@@ -160,7 +204,23 @@ export function parseTranscript(input: ParseInput): Transcript {
       mediaFile: cls.mediaFile,
       text,
       raw: current.raw.join('\n'),
-    })
+    }
+    if (cls.kind === 'nested') {
+      // 只从标记后的行递归解析，保留原缩进；更深层的头不能混入当前层。
+      const marker = current.body.findIndex((line) => line.trim())
+      const childText = current.body.slice(marker + 1).join('\n')
+      if (depth >= MAX_NESTED_DEPTH) message.nestedStatus = 'depth-limit'
+      else {
+        const child = parseLevel({ ...input, text: childText }, depth + 1)
+        if (child.format !== 'unknown' && child.messages.length) {
+          message.children = child.messages
+          message.nestedStatus = child.declaredCount !== undefined && child.declaredCount !== child.messages.length ? 'partial' : 'expanded'
+          message.nestedPreamble = child.preamble
+          message.nestedDeclaredCount = child.declaredCount
+        } else message.nestedStatus = 'unavailable'
+      }
+    }
+    messages.push(message)
     current = null
   }
 
@@ -168,12 +228,12 @@ export function parseTranscript(input: ParseInput): Transcript {
     const rawLine = lines[i]
     const line = rawLine.trim()
     const footer = FOOTER.exec(line)
-    if (footer?.groups) {
+    if (footer?.groups && indentation(rawLine) === baseIndent) {
       declaredCount = Number(footer.groups.n)
       continue
     }
     const hit = format === 'unknown' ? null : matchHeader(lines, i, format)
-    if (hit) {
+    if (hit && hit.indent === baseIndent) {
       flush()
       const rawHeader = hit.span === 2 ? [rawLine, lines[i + 1]] : [rawLine]
       current = { time: normalizeTime(hit.time), who: hit.who, body: [], raw: rawHeader }
@@ -205,12 +265,22 @@ export function parseTranscript(input: ParseInput): Transcript {
 
   // 3) 统计
   const counts: TranscriptCounts = { messages: messages.length, images: 0, videos: 0, files: 0, others: 0 }
-  for (const m of messages) {
-    if (m.kind === 'image') counts.images += 1
-    else if (m.kind === 'video') counts.videos += 1
-    else if (m.kind === 'file') counts.files += 1
-    else if (m.kind !== 'text') counts.others += 1
+  const nested: NestedSummary = { records: 0, messages: 0, unresolved: 0 }
+  function count(list: ChatMessage[], inner: boolean): void {
+    for (const m of list) {
+      if (inner) nested.messages += 1
+      if (m.kind === 'image') counts.images += 1
+      else if (m.kind === 'video') counts.videos += 1
+      else if (m.kind === 'file') counts.files += 1
+      else if (m.kind !== 'text') counts.others += 1
+      if (m.kind === 'nested') {
+        nested.records += 1
+        if (m.nestedStatus !== 'expanded') nested.unresolved += 1
+      }
+      if (m.children) count(m.children, true)
+    }
   }
+  count(messages, false)
   const times = messages.map((m) => m.time).filter((t): t is string => !!t)
   const timeRange = times.length ? { start: times[0], end: times[times.length - 1] } : undefined
 
@@ -236,6 +306,8 @@ export function parseTranscript(input: ParseInput): Transcript {
     rawText,
     txtFileName: input.txtFileName,
     declaredCount,
+    preamble: preamble.join('\n') || undefined,
+    nested,
   }
 }
 

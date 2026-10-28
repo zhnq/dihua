@@ -7,8 +7,8 @@ import { TargetIcon } from '../components/TargetIcon'
 import CodexConversationPicker from '../components/CodexConversationPicker'
 
 const CONFIDENCE: Record<ParseConfidence, { color?: string; text: string }> = {
-  high: { color: 'success', text: '解析完整' },
-  medium: { color: 'warning', text: '部分解析' },
+  high: { text: '已识别格式' },
+  medium: { color: 'warning', text: '格式需核对' },
   low: { color: 'error', text: '未识别格式' },
 }
 
@@ -104,6 +104,7 @@ export default function ConfirmPage(): React.JSX.Element {
   }
 
   const meta: string[] = [`${job.counts.messages} 条`]
+  if (job.nested?.records) meta.push(`含 ${job.nested.records} 段嵌套记录、${job.nested.messages} 条内层消息`)
   if (job.timeRange) meta.push(`${job.timeRange.start} 至 ${job.timeRange.end}`)
   if (job.counts.images) meta.push(`${job.counts.images} 张图片`)
   if (job.counts.videos) meta.push(`${job.counts.videos} 段视频`)
@@ -131,6 +132,7 @@ export default function ConfirmPage(): React.JSX.Element {
           </div>
 
           {job.parseConfidence === 'low' && <Alert type="warning" showIcon message="递话没认出这份记录的逐行格式，已把微信原文完整放进 transcript.md，AI 仍然可以读。" />}
+          {!!job.nested?.unresolved && <Alert type="warning" showIcon message={`${job.nested.unresolved} 段嵌套记录未能完整展开，请查看 transcript.md 中的逐项说明。只有占位符时，可在微信打开该段记录，将内部消息另行转发。`} />}
 
           <Card
             size="small"

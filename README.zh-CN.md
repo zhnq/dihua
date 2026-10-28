@@ -4,6 +4,8 @@
 
 <h1 align="center">递话 · Dihua</h1>
 
+> 此 fork 新增已有 Codex 会话选择、附件复制和可选的直接排队投递。[使用说明](docs/codex-conversations.md)。基于 [ZHlovecat/dihua](https://github.com/ZHlovecat/dihua)。
+
 <p align="center">
   <b>把微信里的话，递给任何 AI。</b><br>
   在 Mac 微信里多选消息、转发给递话，聊天记录连同图片、文件和一句现成的提示词，直接落进 ChatGPT、Claude 或 Gemini。

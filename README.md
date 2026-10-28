@@ -4,6 +4,8 @@
 
 <h1 align="center">Dihua · 递话</h1>
 
+> This fork adds an existing Codex conversation picker, workspace attachment copies, and optional CLI queue delivery. [Usage and requirements](docs/codex-conversations.md). Based on [ZHlovecat/dihua](https://github.com/ZHlovecat/dihua).
+
 <p align="center">
   <b>Hand your WeChat chats to any AI.</b><br>
   Select messages in WeChat for Mac, forward them to Dihua, and they land in ChatGPT, Claude or Gemini — files, images and a ready-made prompt included.

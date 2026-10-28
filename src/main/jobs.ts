@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { basename, join } from 'node:path'
-import { shell } from 'electron'
+import { clipboard, shell } from 'electron'
 import type { ChatMessage, DeliverOptions, DeliverResult, HistoryStats, JobDetail, JobSummary } from '@shared/types'
 import { extractZip, isZipFile } from './extract'
 import { buildHandoffPrompt } from './handoff'
@@ -23,6 +23,7 @@ import { getTarget } from './targets/registry'
 import type { Target } from './targets/types'
 import { incomingDir, tmpDir } from './paths'
 import log from './log'
+import { copyBatchToThread, existingThreadPrompt, getCodexThread, queueCodexMessage } from './codex'
 
 export type JobSource = JobSummary['source']
 
@@ -182,6 +183,39 @@ export async function deliverJob(id: string, opts: DeliverOptions): Promise<Deli
   const detected = await target.detect()
   if (!detected.available) return { ok: false, error: target.installHint ?? `${target.name} 未安装` }
 
+  if (target.id === 'codex' && opts.codex?.mode === 'existing') {
+    const destination = opts.codex
+    try {
+      if (!['open', 'queue'].includes(destination.action)) throw new Error('请选择有效的投递方式。')
+      // Resolve again at delivery time. Never accept a workspace path supplied by the renderer.
+      const thread = await getCodexThread(destination.threadId)
+      const directory = copyBatchToThread(job, thread.cwd)
+      const prompt = existingThreadPrompt(job, directory, thread.cwd)
+      const url = `codex://threads/${thread.id}`
+      if (destination.action === 'queue') {
+        await queueCodexMessage(thread.id, prompt)
+        // Queue success is independent of whether the desktop can navigate there.
+        try { await shell.openExternal(url) } catch { /* user can open the queued thread later */ }
+      } else {
+        await shell.openExternal(url)
+        clipboard.writeText(prompt)
+      }
+      const status = destination.action === 'queue' ? 'queued' : 'prepared'
+      upsertJob({ ...job, status, deliveredTo: target.id, deliveredAt: new Date().toISOString(),
+        deliveredThreadId: thread.id, deliveredThreadName: thread.title, deliveredDirectory: directory,
+        lastPrompt: prompt, error: undefined })
+      updateSettings({ codexDestination: 'existing', codexThreadId: thread.id, codexExistingAction: destination.action })
+      return { ok: true, status, prompt, targetName: `Codex · ${thread.title}`,
+        nextStep: destination.action === 'queue'
+          ? '请求已交给 Codex 排队；请在目标会话查看处理进度。'
+          : '目标会话已打开，提示词已复制。请在输入框按 ⌘V，检查后按回车发送。' }
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err)
+      upsertJob({ ...job, status: 'failed', error })
+      return { ok: false, error }
+    }
+  }
+
   const { prompt, attachments } = handoffFor(job, target)
   try {
     writeFileSync(join(job.inboxDir, 'prompt.md'), prompt, 'utf8')
@@ -207,6 +241,7 @@ export async function deliverJob(id: string, opts: DeliverOptions): Promise<Deli
     error: undefined,
   })
   if (opts.rememberSkipConfirm) updateSettings({ skipConfirm: true, defaultTargetId: target.id })
+  if (target.id === 'codex') updateSettings({ codexDestination: 'new' })
   log.info(`[deliver] ${id} → ${target.id} ok`)
   return { ok: true, prompt, targetName: detected.appName ?? target.name, nextStep: target.nextStep }
 }

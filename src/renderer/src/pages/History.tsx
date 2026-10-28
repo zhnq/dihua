@@ -9,6 +9,8 @@ import iconUrl from '../assets/icon.png'
 const STATUS: Record<JobStatus, { color: string; text: string }> = {
   pending: { color: 'processing', text: '待投递' },
   delivered: { color: 'success', text: '已送达' },
+  prepared: { color: 'processing', text: '待粘贴' },
+  queued: { color: 'processing', text: '已排队' },
   cancelled: { color: 'default', text: '已取消' },
   failed: { color: 'error', text: '未送达' },
 }
@@ -72,6 +74,11 @@ export default function HistoryPage(): React.JSX.Element {
   /** 第三行：这条记录现在怎么样了，用语气色区分 */
   function outcome(job: JobSummary): React.ReactNode {
     switch (job.status) {
+      case 'prepared':
+      case 'queued':
+        return <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          {job.deliveredThreadName ?? 'Codex 会话'} · {job.status === 'queued' ? '请求已排队，处理结果请在会话中查看' : '请在目标会话粘贴提示词并发送'}
+        </Typography.Text>
       case 'delivered':
         return (
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>

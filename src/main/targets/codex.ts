@@ -10,7 +10,7 @@ import type { Target } from './types'
 export const codexTarget: Target = {
   id: 'codex',
   name: 'ChatGPT（Codex）',
-  description: '在 ChatGPT 桌面端以工作区为项目新建对话，按回车发送。',
+  description: '可新建 Codex 会话，也可选择已有会话，继续读取这份聊天记录。',
   capabilities: { autoSend: false, attachments: 'workspace', promptVia: 'deeplink' },
   nextStep: 'ChatGPT 已打开一个带着这份记录的新对话。切过去，告诉它你要做什么，按回车。',
   shareLabel: '递给 ChatGPT',

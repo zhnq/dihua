@@ -57,7 +57,8 @@ async function handleIncomingFile(filePath: string, source: 'share' | 'open-with
     const job = await importZip(filePath, source, { removeSourceAfterCopy })
     const settings = getSettings()
     const directId = targetId ?? (settings.skipConfirm ? settings.defaultTargetId : undefined)
-    if (directId) {
+    // A remembered existing thread never receives a new batch without confirmation.
+    if (directId && !(directId === 'codex' && settings.codexDestination === 'existing')) {
       const targets = await describeTargets()
       const target = targets.find((t) => t.id === directId)
       if (target?.available && target.enabled) {
@@ -112,9 +113,11 @@ app.whenReady().then(async () => {
   scheduleAutoCheck()
   nativeTheme.themeSource = getSettings().themeMode
   // 四个共享入口都登记进系统，再按设置决定开哪几个
-  void registerBundledShareExtensions()
-    .then(() => syncShareEntries())
-    .catch((err) => log.warn('[entries] sync failed', err))
+  if (app.isPackaged) {
+    void registerBundledShareExtensions()
+      .then(() => syncShareEntries())
+      .catch((err) => log.warn('[entries] sync failed', err))
+  }
 
   nativeTheme.on('updated', () => broadcast('theme:changed', nativeTheme.shouldUseDarkColors))
 

@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Alert, App as AntApp, Button, Card, Checkbox, Collapse, Flex, Layout, List, Result, Select, Space, Spin, Tag, Typography, theme } from 'antd'
 import { FolderOpenOutlined, SendOutlined } from '@ant-design/icons'
-import type { JobDetail, ParseConfidence, Settings, TargetInfo } from '@shared/types'
+import type { CodexDestination, JobDetail, JobStatus, ParseConfidence, Settings, TargetInfo } from '@shared/types'
 import { TargetIcon } from '../components/TargetIcon'
+import CodexConversationPicker from '../components/CodexConversationPicker'
 
 const CONFIDENCE: Record<ParseConfidence, { color?: string; text: string }> = {
   high: { color: 'success', text: '解析完整' },
@@ -22,7 +23,9 @@ export default function ConfirmPage(): React.JSX.Element {
   const [targetId, setTargetId] = useState('')
   const [remember, setRemember] = useState(false)
   const [sending, setSending] = useState(false)
-  const [done, setDone] = useState<{ name: string; nextStep: string } | null>(null)
+  const [done, setDone] = useState<{ name: string; nextStep: string; status?: JobStatus } | null>(null)
+  const [codex, setCodex] = useState<CodexDestination>({ mode: 'new' })
+  const [codexReady, setCodexReady] = useState(true)
   /** 递给当前所选目标时会带的上下文；目标不同措辞不同（ChatGPT 给路径，Gemini 说附件） */
   const [prompt, setPrompt] = useState<string>('')
 
@@ -31,6 +34,7 @@ export default function ConfirmPage(): React.JSX.Element {
       const [j, s, t] = await Promise.all([window.dihua.jobs.get(jobId), window.dihua.settings.get(), window.dihua.targets.list()])
       setJob(j ?? null)
       setSettings(s)
+      if (s.codexDestination === 'existing') setCodex({ mode: 'existing', threadId: s.codexThreadId ?? '', action: s.codexExistingAction ?? 'open' })
       const usable = t.filter((x) => x.enabled)
       setTargets(usable)
       const preferred = usable.find((x) => x.id === s.defaultTargetId && x.available) ?? usable.find((x) => x.available) ?? usable[0]
@@ -41,6 +45,7 @@ export default function ConfirmPage(): React.JSX.Element {
   const target = useMemo(() => targets.find((t) => t.id === targetId), [targets, targetId])
   const targetLabel = target?.appName ?? target?.name ?? '目标应用'
   const viaClipboard = target?.capabilities.promptVia === 'clipboard'
+  const existingCodex = targetId === 'codex' && codex.mode === 'existing'
 
   useEffect(() => {
     if (!targetId) return
@@ -56,15 +61,15 @@ export default function ConfirmPage(): React.JSX.Element {
   async function send(): Promise<void> {
     if (!target) return
     setSending(true)
-    const res = await window.dihua.jobs.deliver(jobId, { targetId, rememberSkipConfirm: remember })
-    setSending(false)
-    if (res.ok) {
-      setDone({ name: res.targetName, nextStep: res.nextStep })
-      // 要用户回去粘贴的目标多留一会儿，让人看清下一步
-      setTimeout(() => void window.dihua.app.closeWindow(), viaClipboard ? 4000 : 2400)
-    } else {
-      message.error(res.error)
-    }
+    try {
+      const res = await window.dihua.jobs.deliver(jobId, { targetId, rememberSkipConfirm: !existingCodex && remember,
+        ...(targetId === 'codex' ? { codex } : {}) })
+      if (res.ok) {
+        setDone({ name: res.targetName, nextStep: res.nextStep, status: res.status })
+        setTimeout(() => void window.dihua.app.closeWindow(), viaClipboard || existingCodex ? 5000 : 2400)
+      } else message.error(res.error)
+    } catch { message.error('投递未完成，请检查目标会话和记录后再重试。') }
+    finally { setSending(false) }
   }
 
   async function cancel(): Promise<void> {
@@ -93,7 +98,7 @@ export default function ConfirmPage(): React.JSX.Element {
     return (
       <Layout style={{ height: '100vh' }}>
         <div className="drag-region" style={{ height: 38 }} />
-        <Result status="success" title={`已递给 ${done.name}`} subTitle={done.nextStep} extra={closeButton} />
+        <Result status="success" title={done.status === 'queued' ? '请求已排队' : done.status === 'prepared' ? '目标会话已打开' : `已递给 ${done.name}`} subTitle={`${done.name}。${done.nextStep}`} extra={closeButton} />
       </Layout>
     )
   }
@@ -157,6 +162,7 @@ export default function ConfirmPage(): React.JSX.Element {
           <Card size="small" title="递给">
             <Select
               value={targetId || undefined}
+              disabled={sending}
               onChange={(v) => setTargetId(String(v))}
               placeholder="选择要递给的应用"
               style={{ width: '100%' }}
@@ -173,6 +179,7 @@ export default function ConfirmPage(): React.JSX.Element {
                 ),
               }))}
             />
+            {targetId === 'codex' && <CodexConversationPicker value={codex} onChange={setCodex} onReady={setCodexReady} disabled={sending} rememberedId={settings.codexThreadId} />}
             {target && (
               <Typography.Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 8 }}>
                 {target.description}
@@ -186,10 +193,12 @@ export default function ConfirmPage(): React.JSX.Element {
             items={[
               {
                 key: 'prompt',
-                label: viaClipboard ? `会复制到剪贴板、粘贴给 ${targetLabel} 的上下文` : `预填给 ${targetLabel} 的上下文`,
+                label: existingCodex ? '本次会话投递说明' : viaClipboard ? `会复制到剪贴板、粘贴给 ${targetLabel} 的上下文` : `预填给 ${targetLabel} 的上下文`,
                 children: (
                   <Typography.Paragraph className="selectable" style={{ margin: 0 }}>
-                    <pre className="pre">{prompt || job.handoffPrompt}</pre>
+                    <pre className="pre">{existingCodex
+                      ? '将本批记录复制到所选会话的 dihua-inbox/，提示 Codex 阅读 transcript.md，并实际查看图片和文件。占位符及无法展开的嵌套记录会要求明确说明。'
+                      : prompt || job.handoffPrompt}</pre>
                   </Typography.Paragraph>
                 ),
               },
@@ -200,13 +209,13 @@ export default function ConfirmPage(): React.JSX.Element {
 
       <Layout.Footer style={{ padding: '12px 24px', borderTop: `1px solid ${token.colorBorderSecondary}` }}>
         <Flex justify="space-between" align="center">
-          <Checkbox checked={remember} onChange={(e) => setRemember(e.target.checked)}>
+          {existingCodex ? <Typography.Text type="secondary">将记住本次会话选择</Typography.Text> : <Checkbox checked={remember} onChange={(e) => setRemember(e.target.checked)}>
             下次不再询问，直接递给 {targetLabel}
-          </Checkbox>
+          </Checkbox>}
           <Space>
-            <Button onClick={cancel}>取消</Button>
-            <Button type="primary" icon={<SendOutlined />} loading={sending} disabled={!target?.available} onClick={send}>
-              递给 {targetLabel}
+            <Button disabled={sending} onClick={cancel}>取消</Button>
+            <Button type="primary" icon={<SendOutlined />} loading={sending} disabled={!target?.available || (existingCodex && !codexReady)} onClick={send}>
+              {existingCodex ? codex.action === 'queue' ? '发送到所选会话' : '打开所选会话' : `递给 ${targetLabel}`}
             </Button>
           </Space>
         </Flex>

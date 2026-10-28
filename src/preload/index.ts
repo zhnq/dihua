@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type {
   AppInfo,
+  CodexThread,
+  CodexThreadPage,
   DeliverOptions,
   DeliverResult,
   HistoryStats,
@@ -58,6 +60,10 @@ const api = {
   targets: {
     list: (): Promise<TargetInfo[]> => ipcRenderer.invoke('targets:list'),
     setEnabled: (id: string, enabled: boolean): Promise<TargetInfo[]> => ipcRenderer.invoke('targets:setEnabled', id, enabled),
+  },
+  codex: {
+    threads: (input?: { search?: string; cursor?: string }): Promise<({ ok: true } & CodexThreadPage) | { ok: false; error: string }> => ipcRenderer.invoke('codex:threads', input),
+    thread: (id: string): Promise<{ ok: true; thread: CodexThread } | { ok: false; error: string }> => ipcRenderer.invoke('codex:thread', id),
   },
   wechat: {
     /** 我的微信头像（登录页缓存），data URL；拿不到时 undefined */

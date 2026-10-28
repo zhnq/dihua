@@ -47,7 +47,7 @@ export interface Transcript {
   declaredCount?: number
 }
 
-export type JobStatus = 'pending' | 'delivered' | 'cancelled' | 'failed'
+export type JobStatus = 'pending' | 'delivered' | 'prepared' | 'queued' | 'cancelled' | 'failed'
 
 export interface JobSummary {
   id: string
@@ -65,6 +65,9 @@ export interface JobSummary {
   status: JobStatus
   deliveredTo?: string
   deliveredAt?: string
+  deliveredThreadId?: string
+  deliveredThreadName?: string
+  deliveredDirectory?: string
   lastPrompt?: string
   error?: string
 }
@@ -122,15 +125,36 @@ export interface Settings {
   autoCheckUpdates: boolean
   /** 用户点过「跳过这个版本」的版本号，不再为它弹通知 */
   skippedUpdateVersion?: string
+  /** Existing conversations are always confirmed, even when skipConfirm is enabled. */
+  codexDestination?: 'new' | 'existing'
+  codexThreadId?: string
+  codexExistingAction?: 'open' | 'queue'
 }
+
+export interface CodexThread {
+  id: string
+  title: string
+  cwd: string
+  updatedAt: number
+}
+
+export interface CodexThreadPage {
+  threads: CodexThread[]
+  nextCursor: string | null
+}
+
+export type CodexDestination =
+  | { mode: 'new' }
+  | { mode: 'existing'; threadId: string; action: 'open' | 'queue' }
 
 export interface DeliverOptions {
   targetId: string
   rememberSkipConfirm?: boolean
+  codex?: CodexDestination
 }
 
 export type DeliverResult =
-  | { ok: true; prompt: string; targetName: string; nextStep: string }
+  | { ok: true; prompt: string; targetName: string; nextStep: string; status?: JobStatus }
   | { ok: false; error: string }
 
 export interface AppInfo {

@@ -10,6 +10,7 @@ import { checkForUpdates } from './update'
 import { showConfirmWindow, showMainWindow } from './windows'
 import { ensureWorkspaceRoot } from './workspace'
 import log from './log'
+import { getCodexThread, listCodexThreads } from './codex'
 
 export function registerIpc(): void {
   ipcMain.handle('app:info', (): AppInfo => ({
@@ -54,6 +55,14 @@ export function registerIpc(): void {
   })
 
   ipcMain.handle('targets:list', () => describeTargets())
+  ipcMain.handle('codex:threads', async (_e, input?: { search?: string; cursor?: string }) => {
+    try { return { ok: true, ...await listCodexThreads(input) } }
+    catch (err) { return { ok: false, error: err instanceof Error ? err.message : String(err) } }
+  })
+  ipcMain.handle('codex:thread', async (_e, id: string) => {
+    try { return { ok: true, thread: await getCodexThread(id) } }
+    catch (err) { return { ok: false, error: err instanceof Error ? err.message : String(err) } }
+  })
   ipcMain.handle('targets:setEnabled', async (_e, id: string, enabled: boolean) => {
     const targets = await setTargetEnabled(id, enabled)
     void syncShareEntries() // 「递给 X」入口跟着目标开关走

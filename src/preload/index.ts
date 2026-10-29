@@ -1,10 +1,13 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type {
   AppInfo,
+  CodexThread,
+  CodexThreadPage,
   DeliverOptions,
   DeliverResult,
   HistoryStats,
   JobDetail,
+  JobContent,
   JobSummary,
   Settings,
   ShareEntriesInfo,
@@ -26,6 +29,7 @@ const api = {
     openPath: (p: string): Promise<string> => ipcRenderer.invoke('shell:openPath', p),
     showMain: (route?: string): Promise<void> => ipcRenderer.invoke('window:showMain', route),
     closeWindow: (): Promise<void> => ipcRenderer.invoke('window:close'),
+    confirmView: (view: 'compact' | 'conversation' | 'content' | 'options' | 'done'): Promise<void> => ipcRenderer.invoke('window:confirmView', view),
     onNav: (cb: (route: string) => void) => on('nav', (r) => cb(r as string)),
   },
   theme: {
@@ -38,6 +42,10 @@ const api = {
   },
   jobs: {
     get: (id: string): Promise<JobDetail | undefined> => ipcRenderer.invoke('job:get', id),
+    content: (id: string): Promise<JobContent | undefined> => ipcRenderer.invoke('job:content', id),
+    revealAttachment: (id: string, path: string): Promise<void> => ipcRenderer.invoke('job:revealAttachment', id, path),
+    copyPrompt: (id: string): Promise<void> => ipcRenderer.invoke('job:copyPrompt', id),
+    reopenTarget: (id: string): Promise<void> => ipcRenderer.invoke('job:reopenTarget', id),
     /** 递给某个目标时会带的上下文；目标不同措辞不同 */
     prompt: (id: string, targetId: string): Promise<string | undefined> => ipcRenderer.invoke('job:prompt', id, targetId),
     deliver: (id: string, opts: DeliverOptions): Promise<DeliverResult> => ipcRenderer.invoke('job:deliver', id, opts),
@@ -58,6 +66,10 @@ const api = {
   targets: {
     list: (): Promise<TargetInfo[]> => ipcRenderer.invoke('targets:list'),
     setEnabled: (id: string, enabled: boolean): Promise<TargetInfo[]> => ipcRenderer.invoke('targets:setEnabled', id, enabled),
+  },
+  codex: {
+    threads: (input?: { search?: string; cursor?: string }): Promise<({ ok: true } & CodexThreadPage) | { ok: false; error: string }> => ipcRenderer.invoke('codex:threads', input),
+    thread: (id: string): Promise<{ ok: true; thread: CodexThread } | { ok: false; error: string }> => ipcRenderer.invoke('codex:thread', id),
   },
   wechat: {
     /** 我的微信头像（登录页缓存），data URL；拿不到时 undefined */

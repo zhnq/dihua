@@ -1,4 +1,4 @@
-/* 只保留 antd 覆盖不到的窗口级行为；所有视觉样式都来自 Ant Design 组件与默认主题 */
+/* 窗口级行为，以及转发确认窗的 macOS 紧凑布局。 */
 html,
 body,
 #root {
@@ -53,4 +53,165 @@ body {
 .theme-option:focus-visible {
   outline: 2px solid var(--ant-color-primary, #1677ff);
   outline-offset: 2px;
+}
+
+/* Confirm: a single quiet surface; details appear only when requested. */
+.confirm-root {
+  --surface: #fff;
+  --surface-subtle: #f4f4f6;
+  --surface-hover: #ededf0;
+  --ink: #242426;
+  --secondary: #65656c;
+  --divider: #e6e6e9;
+  --accent: #0068db;
+  --selection: #e7f0fc;
+  --warning: #996400;
+  --error: #b42327;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  color: var(--ink);
+  font: 13px/1.5 -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
+}
+html[data-theme='dark'] .confirm-root {
+  --surface: #202022;
+  --surface-subtle: #2c2c2f;
+  --surface-hover: #36363a;
+  --ink: #f0f0f2;
+  --secondary: #b4b4bc;
+  --divider: #3c3c40;
+  --accent: #78b6ff;
+  --selection: #233d5b;
+  --warning: #efc16e;
+  --error: #ff9a9d;
+}
+.confirm-root *, .confirm-root *::before, .confirm-root *::after { box-sizing: border-box; }
+.confirm-root [hidden] { display: none !important; }
+.confirm-root button, .confirm-root input, .confirm-root textarea { font: inherit; }
+.confirm-root button { cursor: pointer; }
+.confirm-root button:disabled { cursor: default; }
+.confirm-root .ant-btn { height: 32px; padding-inline: 13px; font-size: 13px; border-radius: 7px; box-shadow: none; }
+.confirm-root .ant-btn-primary { background: #006be6; }
+.confirm-root .ant-btn-primary:hover:not(:disabled) { background: #005fc9; }
+.confirm-root .ant-btn-primary:disabled { background: var(--surface-subtle); color: var(--secondary); }
+.confirm-root .ant-btn-link { color: var(--accent); padding-inline: 4px; }
+.confirm-root .ant-btn-text { color: var(--secondary); }
+.confirm-root .ant-btn-text:hover:not(:disabled) { background: var(--surface-hover); color: var(--ink); }
+.confirm-root button:focus-visible, .confirm-root summary:focus-visible, .conversation-list:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.confirm-root h1, .confirm-root h2, .confirm-root p { margin: 0; }
+.confirm-root h2 { font-size: 13px; font-weight: 600; }
+.confirm-titlebar { height: 48px; flex-shrink: 0; position: relative; border-bottom: 1px solid var(--divider); background: var(--surface-subtle); display: flex; align-items: center; justify-content: center; }
+.confirm-titlebar h1 { font-size: 14px; font-weight: 600; max-width: 52%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.title-app-switch { border: 0; padding: 5px 8px; border-radius: 5px; color: var(--ink); background: transparent; font-weight: 600 !important; display: inline-flex; align-items: center; gap: 7px; }
+.title-app-switch:hover { background: var(--surface-hover); }
+.title-app-switch .anticon { font-size: 9px; color: var(--secondary); }
+.target-menu-label { display: inline-flex; gap: 8px; align-items: center; }
+.confirm-root .confirm-more { position: absolute; right: 14px; padding: 4px 9px; font-size: 19px; }
+.confirm-root .confirm-back { position: absolute; left: 88px; height: 28px; padding: 2px 5px; font-size: 12px; }
+.confirm-body { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 24px 24px; }
+.source-summary { display: flex; align-items: center; gap: 12px; min-height: 40px; }
+.source-icon, .recipient-icon { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 9px; background: var(--surface-subtle); color: var(--secondary); font-size: 23px; }
+.source-copy, .recipient-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.source-copy strong { font-size: 15px; line-height: 1.4; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.source-copy > span { font-size: 12px; color: var(--secondary); line-height: 1.5; }
+.text-action { background: none; border: 0; color: var(--accent); padding: 0; display: inline-flex; align-items: center; gap: 6px; text-align: left; }
+.text-action:hover { text-decoration: underline; }
+.source-disclosure { flex-shrink: 0; font-size: 12px !important; }
+.source-disclosure .anticon, .summary-warning > .anticon:last-child { font-size: 10px; }
+.summary-warning { width: 100%; display: flex; align-items: center; gap: 8px; background: none; border: 0; color: var(--warning); padding: 13px 0 0; text-align: left; font-size: 12px !important; }
+.summary-warning span:nth-child(2) { flex: 1; }
+.summary-warning:hover span:nth-child(2) { text-decoration: underline; }
+.section-divider { border-top: 1px solid var(--divider); margin: 22px 0; }
+.recipient-section > h2 { margin-bottom: 10px; }
+.recipient-row { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; background: var(--surface-subtle); min-height: 68px; }
+.recipient-row .recipient-icon { background: var(--surface); flex-basis: 36px; width: 36px; height: 36px; font-size: 22px; }
+.recipient-copy strong { font-size: 14px; font-weight: 600; line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.recipient-copy > span { font-size: 12px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inline-error { color: var(--error); margin-top: 10px; font-size: 12px; }
+.note-section { margin-top: 14px; }
+.note-disclosure { border: 0; background: var(--surface-subtle); color: var(--secondary); width: 100%; min-height: 38px; padding: 9px 12px; border-radius: 8px; display: flex; align-items: center; gap: 10px; text-align: left; }
+.note-disclosure:hover { background: var(--surface-hover); }
+.note-disclosure > span:nth-child(2) { flex: 1; }
+.note-disclosure > .anticon:last-child { font-size: 11px; transition: transform 120ms; }
+.note-disclosure .disclosure-open { transform: rotate(180deg); }
+.confirm-root .delivery-note { margin-top: 9px; border-radius: 8px; padding: 10px 12px; background: var(--surface); color: var(--ink); border-color: var(--divider); font-size: 13px; }
+.confirm-footer { flex-shrink: 0; background: var(--surface); padding: 14px 24px; border-top: 1px solid var(--divider); }
+.footer-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 36px; }
+.footer-hint { font-size: 11px; line-height: 1.6; color: var(--secondary); min-width: 0; }
+.footer-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.delivery-error { color: var(--error); font-size: 12px; line-height: 1.6; display: flex; align-items: baseline; gap: 7px; padding-bottom: 10px; user-select: text; overflow-wrap: anywhere; }
+.view-conversation { overflow: hidden; padding-top: 20px; }
+.conversation-chooser { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.confirm-root .conversation-chooser .ant-input-affix-wrapper { border-radius: 8px; padding: 8px 11px; font-size: 13px; flex-shrink: 0; background: var(--surface); border-color: var(--divider); }
+.confirm-root .conversation-chooser .ant-input { background: transparent; color: var(--ink); }
+.confirm-root .conversation-chooser .ant-input-prefix { color: var(--secondary); margin-right: 8px; }
+.chooser-label { display: flex; justify-content: space-between; align-items: center; color: var(--secondary); font-size: 12px; padding-top: 12px; padding-bottom: 6px; }
+.conversation-list { overflow: auto; flex: 1; min-height: 0; border-radius: 7px; }
+.conversation-option { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 10px; background: none; border: 0; border-bottom: 1px solid var(--divider); color: var(--ink); text-align: left; }
+.conversation-option.keyboard-active { background: var(--surface-subtle); }
+.conversation-option[aria-selected='true'] { background: var(--selection); }
+.conversation-symbol { font-size: 20px; color: var(--secondary); }
+.conversation-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.conversation-copy strong { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conversation-copy small { color: var(--secondary); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.selection-check { color: var(--accent); }
+.new-conversation { display: flex; align-items: center; gap: 10px; flex-shrink: 0; padding: 16px 10px 0; background: none; border: 0; border-top: 1px solid var(--divider); color: var(--accent); text-align: left; }
+.new-conversation:hover { text-decoration: underline; }
+.load-more { margin: 12px; font-size: 12px !important; }
+.list-state { flex: 1; min-height: 110px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 24px; text-align: center; color: var(--secondary); }
+.list-state strong { font-size: 14px; font-weight: 500; color: var(--ink); }
+.list-state span { overflow-wrap: anywhere; }
+.view-content { padding: 0; overflow: hidden; }
+.preview-wrapper, .content-preview { height: 100%; min-height: 0; }
+.content-preview { display: grid; grid-template-columns: minmax(0, 1fr) 228px; }
+.message-preview { min-width: 0; overflow: auto; padding: 22px 24px; }
+.preview-heading h2 { font-size: 15px; overflow-wrap: anywhere; }
+.preview-heading > span, .preview-time { display: block; color: var(--secondary); font-size: 11px; margin-top: 5px !important; }
+.preview-message { border-bottom: 1px solid var(--divider); padding: 14px 0; }
+.preview-message.inner-message { border-left: 2px solid var(--divider); padding-left: 10px; }
+.message-meta { display: flex; align-items: baseline; flex-wrap: wrap; gap: 7px; font-size: 11px; margin-bottom: 5px; }
+.message-meta strong { font-size: 12px; font-weight: 600; }
+.message-meta time, .message-meta > span { color: var(--secondary); }
+.preview-message p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.content-warning, .preview-limit { font-size: 11px; color: var(--warning); display: block; margin-top: 7px !important; }
+.attachment-preview { overflow: auto; border-left: 1px solid var(--divider); padding: 22px 16px; }
+.attachment-preview h2 { margin-bottom: 12px; }
+.attachment-preview h2 > span { color: var(--secondary); font-weight: 400; padding-left: 4px; }
+.attachment-row { display: flex; align-items: center; gap: 9px; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--divider); color: var(--ink); width: 100%; padding: 13px 0; }
+.attachment-row:hover .attachment-copy strong { color: var(--accent); }
+.attachment-symbol { flex: 0 0 40px; width: 40px; height: 40px; display: grid; place-items: center; font-size: 25px; color: var(--secondary); position: relative; }
+.attachment-symbol img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: var(--surface); border-radius: 4px; }
+.attachment-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.attachment-copy strong { font-weight: 500; font-size: 12px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.attachment-copy small { font-size: 11px; color: var(--secondary); }
+.attachment-help { font-size: 11px; color: var(--secondary); margin-top: 16px !important; line-height: 1.7; }
+.reveal-record { font-size: 11px !important; margin-top: 16px; }
+.transfer-options h2 { font-size: 15px; margin-bottom: 18px; }
+.option-switch { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 0; border-bottom: 1px solid var(--divider); }
+.option-switch > div { display: flex; flex-direction: column; gap: 5px; }
+.option-switch strong { font-size: 13px; font-weight: 500; }
+.option-switch span, .transfer-options p { font-size: 12px; color: var(--secondary); line-height: 1.7; }
+.transfer-options p { margin-top: 14px; }
+.option-destination { overflow-wrap: anywhere; }
+.delivery-details { margin-top: 22px; font-size: 12px; }
+.delivery-details summary { cursor: pointer; color: var(--ink); }
+.delivery-details .text-action { margin-top: 12px; }
+.app-settings-link { margin-top: 24px; font-size: 12px !important; }
+.handoff-result { flex: 1; min-height: 0; overflow: auto; padding: 30px 45px 24px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; }
+.handoff-status-icon { width: 48px; height: 48px; border-radius: 12px; background: var(--surface-subtle); display: grid; place-items: center; color: var(--secondary); font-size: 25px; }
+.handoff-result h2 { font-size: 19px; font-weight: 600; }
+.result-destination { font-size: 12px; font-weight: 500; max-width: 100%; overflow-wrap: anywhere; }
+.handoff-result p { color: var(--secondary); font-size: 13px; line-height: 1.8; max-width: 380px; }
+.result-actions { display: flex; gap: 8px; margin-top: 3px; }
+@media (max-width: 620px) {
+  .content-preview { grid-template-columns: minmax(0, 1fr) 180px; }
+  .message-preview { padding: 18px 16px; }
+  .attachment-preview { padding: 18px 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .confirm-root *, .confirm-root *::before, .confirm-root *::after { transition: none !important; scroll-behavior: auto !important; }
+}
+@media (prefers-contrast: more) {
+  .confirm-root { --secondary: var(--ink); --divider: #96969e; }
 }

@@ -8,7 +8,7 @@ import type { AttachmentPlan } from './targets/attachments'
  * 不传 plan：目标能读本地目录（ChatGPT/Codex），告诉它工作区里的相对路径。
  * 传 plan：目标只认附件（Gemini），告诉它附件里有什么、哪些没带全。
  */
-export function buildHandoffPrompt(job: JobSummary, plan?: AttachmentPlan): string {
+export function buildHandoffPrompt(job: JobSummary, plan?: AttachmentPlan, note = ''): string {
   const facts: string[] = [job.title, `${job.counts.messages} 条`]
   if (job.timeRange) facts.push(`${job.timeRange.start} 至 ${job.timeRange.end}`)
 
@@ -27,8 +27,24 @@ export function buildHandoffPrompt(job: JobSummary, plan?: AttachmentPlan): stri
     if (job.counts.images) out += '图片在同目录 媒体/ 下，可以直接查看。'
     if (job.counts.videos) out += '视频看同名的 .thumb.png 缩略图。'
   }
+  out += describeNested(job)
   if (job.parseConfidence === 'low') out += '这份记录没能按条解析，transcript.md 里是微信原文。'
   out += '请先通读它，然后按我下面的要求处理：\n'
+  out += note
+  return out
+}
+
+export function normalizeDeliveryNote(value: unknown): string {
+  if (value === undefined) return ''
+  if (typeof value !== 'string') throw new Error('附加说明必须是文字。')
+  if (value.length > 2000) throw new Error('附加说明最多 2000 字，请精简后重试。')
+  return value.trim()
+}
+
+export function describeNested(job: Pick<JobSummary, 'nested'>): string {
+  if (!job.nested?.records) return ''
+  let out = `其中含 ${job.nested.records} 段嵌套聊天记录、${job.nested.messages} 条内层消息，transcript.md 用引用层级保留转发关系，请连同内层内容和附件一起阅读。`
+  if (job.nested.unresolved) out += `有 ${job.nested.unresolved} 段未能完整展开，请按文中标注说明缺失或解析限制，不要推测内部正文。`
   return out
 }
 

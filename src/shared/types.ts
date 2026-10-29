@@ -16,9 +16,23 @@ export interface ChatMessage {
   sender?: string
   kind: MessageKind
   text: string
-  /** 媒体/ 下的文件名（占位符成功关联到真实文件时） */
+  /** 解析时关联的源文件路径 */
   mediaFile?: string
+  /** 整理后相对于本批目录的附件路径 */
+  attachmentPath?: string
+  /** 转发记录的内部消息；保留父子关系和各自的时间、发言人 */
+  children?: ChatMessage[]
+  nestedStatus?: 'expanded' | 'partial' | 'unavailable' | 'depth-limit'
+  nestedPreamble?: string
+  nestedDeclaredCount?: number
   raw: string
+}
+
+export interface NestedSummary {
+  records: number
+  /** 所有内层消息数（包含更深层的转发容器） */
+  messages: number
+  unresolved: number
 }
 
 export type ParseConfidence = 'high' | 'medium' | 'low'
@@ -45,9 +59,11 @@ export interface Transcript {
   txtFileName?: string
   /** 尾行声明的条数（若有） */
   declaredCount?: number
+  preamble?: string
+  nested?: NestedSummary
 }
 
-export type JobStatus = 'pending' | 'delivered' | 'cancelled' | 'failed'
+export type JobStatus = 'pending' | 'delivered' | 'prepared' | 'queued' | 'cancelled' | 'failed'
 
 export interface JobSummary {
   id: string
@@ -62,9 +78,13 @@ export interface JobSummary {
   timeRange?: { start: string; end: string }
   parseConfidence: ParseConfidence
   format: LineFormat
+  nested?: NestedSummary
   status: JobStatus
   deliveredTo?: string
   deliveredAt?: string
+  deliveredThreadId?: string
+  deliveredThreadName?: string
+  deliveredDirectory?: string
   lastPrompt?: string
   error?: string
 }
@@ -74,6 +94,20 @@ export interface JobDetail extends JobSummary {
   mediaFiles: string[]
   /** 递过去时预填的上下文 */
   handoffPrompt: string
+}
+
+export interface ContentAttachment {
+  path: string
+  name: string
+  kind: 'image' | 'video' | 'file'
+  bytes: number
+  thumbnail?: string
+}
+
+export interface JobContent {
+  messages: Array<Omit<ChatMessage, 'children'> & { depth: number }>
+  attachments: ContentAttachment[]
+  truncated: boolean
 }
 
 export interface TargetCapabilities {
@@ -122,15 +156,38 @@ export interface Settings {
   autoCheckUpdates: boolean
   /** 用户点过「跳过这个版本」的版本号，不再为它弹通知 */
   skippedUpdateVersion?: string
+  /** Existing conversations are always confirmed, even when skipConfirm is enabled. */
+  codexDestination?: 'new' | 'existing'
+  codexThreadId?: string
+  codexExistingAction?: 'open' | 'queue'
 }
+
+export interface CodexThread {
+  id: string
+  title: string
+  cwd: string
+  updatedAt: number
+}
+
+export interface CodexThreadPage {
+  threads: CodexThread[]
+  nextCursor: string | null
+}
+
+export type CodexDestination =
+  | { mode: 'new' }
+  | { mode: 'existing'; threadId: string; action: 'open' | 'queue' }
 
 export interface DeliverOptions {
   targetId: string
   rememberSkipConfirm?: boolean
+  codex?: CodexDestination
+  /** 仅附在本次交接提示词中，不保存为默认任务 */
+  note?: string
 }
 
 export type DeliverResult =
-  | { ok: true; prompt: string; targetName: string; nextStep: string }
+  | { ok: true; prompt: string; targetName: string; nextStep: string; status?: JobStatus }
   | { ok: false; error: string }
 
 export interface AppInfo {

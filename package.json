@@ -1,15 +1,15 @@
 {
   "name": "dihua",
   "productName": "Dihua",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "description": "把微信里的话，递给任何 AI。macOS 微信「转发到其他应用」→ 递话 → ChatGPT / Claude / Gemini 桌面端",
-  "homepage": "https://github.com/ZHlovecat/dihua",
+  "homepage": "https://github.com/zhnq/dihua",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ZHlovecat/dihua.git"
+    "url": "https://github.com/zhnq/dihua.git"
   },
   "bugs": {
-    "url": "https://github.com/ZHlovecat/dihua/issues"
+    "url": "https://github.com/zhnq/dihua/issues"
   },
   "main": "./out/main/index.js",
   "author": "zhanghang",

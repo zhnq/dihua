@@ -1,4 +1,4 @@
-import { BrowserWindow, nativeTheme, shell } from 'electron'
+import { BrowserWindow, nativeTheme, screen, shell, systemPreferences } from 'electron'
 import { join } from 'node:path'
 
 let mainWindow: BrowserWindow | null = null
@@ -67,16 +67,31 @@ export function showConfirmWindow(jobId: string): BrowserWindow {
   }
   const win = new BrowserWindow({
     ...baseOptions(),
-    width: 640,
-    height: 600,
-    minWidth: 600,
-    minHeight: 520,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#202022' : '#ffffff',
+    width: 560,
+    height: 430,
+    minWidth: 520,
+    minHeight: 420,
     title: '递话',
   })
   load(win, `/confirm/${jobId}`)
   win.on('closed', () => confirmWindows.delete(jobId))
   confirmWindows.set(jobId, win)
   return win
+}
+
+export function resizeConfirmWindow(win: BrowserWindow | null, view: string): void {
+  if (!win || win.isDestroyed() || !win.webContents.getURL().includes('#/confirm/')) return
+  const sizes: Record<string, [number, number]> = { compact: [560, 430], conversation: [560, 620], content: [760, 600], options: [560, 580], done: [560, 440] }
+  const size = sizes[view]
+  if (!size) return
+  const bounds = win.getBounds()
+  const area = screen.getDisplayMatching(bounds).workArea
+  const width = Math.min(size[0], area.width)
+  const height = Math.min(size[1], area.height)
+  const x = Math.max(area.x, Math.min(bounds.x + (bounds.width - width) / 2, area.x + area.width - width))
+  const y = Math.max(area.y, Math.min(bounds.y, area.y + area.height - height))
+  win.setBounds({ x: Math.round(x), y, width, height }, !systemPreferences.getAnimationSettings().prefersReducedMotion)
 }
 
 export function broadcast(channel: string, ...args: unknown[]): void {

@@ -75,7 +75,7 @@ export default function GeneralPage(): React.JSX.Element {
             title="收到记录后直接递出去"
             detail={
               defaultTarget?.available
-                ? '不弹确认窗。微信「转发到其他应用」里会按目标应用分开列出（递给 ChatGPT、递给 Claude…），点哪个就直接递给哪个；从别处递来的交给默认目标。'
+                ? '微信「转发到其他应用」里会按目标应用分开列出（递给 ChatGPT、递给 Claude…），点哪个就递给哪个；从别处递来的交给默认目标。选择已有 Codex 会话时仍会弹窗确认。'
                 : '需要先在「目标应用」里有一个可用的默认目标。'
             }
           >

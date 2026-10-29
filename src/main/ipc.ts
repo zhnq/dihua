@@ -22,6 +22,7 @@ export function registerIpc(): void {
     isPackaged: app.isPackaged,
   }))
   ipcMain.handle('theme:isDark', () => nativeTheme.shouldUseDarkColors)
+  ipcMain.handle('theme:isReducedTransparency', () => nativeTheme.prefersReducedTransparency)
 
   ipcMain.handle('job:get', (_e, id: string) => getJobDetail(id))
   ipcMain.handle('job:content', (_e, id: string) => {

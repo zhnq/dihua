@@ -13,13 +13,20 @@ dayjs.locale('zh-cn')
 
 function Root(): React.JSX.Element {
   const [dark, setDark] = useState<boolean>(window.matchMedia('(prefers-color-scheme: dark)').matches)
+  const [reducedTransparency, setReducedTransparency] = useState(window.matchMedia('(prefers-reduced-transparency: reduce)').matches)
 
   useEffect(() => {
     void window.dihua.theme.isDark().then(setDark)
     return window.dihua.theme.onChange(setDark)
   }, [])
 
+  useEffect(() => {
+    void window.dihua.theme.isReducedTransparency().then(setReducedTransparency)
+    return window.dihua.theme.onTransparencyChange(setReducedTransparency)
+  }, [])
+
   useEffect(() => { document.documentElement.dataset.theme = dark ? 'dark' : 'light' }, [dark])
+  useEffect(() => { document.documentElement.dataset.transparency = reducedTransparency ? 'reduced' : 'full' }, [reducedTransparency])
 
   return (
     <ConfigProvider locale={zhCN} theme={makeTheme(dark)}>

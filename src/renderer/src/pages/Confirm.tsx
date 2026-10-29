@@ -17,6 +17,7 @@ export default function ConfirmPage(): React.JSX.Element {
   const [job, setJob] = useState<JobDetail | null>()
   const [settings, setSettings] = useState<Settings>()
   const [targets, setTargets] = useState<TargetInfo[]>([])
+  const [targetMenuOpen, setTargetMenuOpen] = useState(false)
   const [targetId, setTargetId] = useState('')
   const [codex, setCodex] = useState<CodexDestination>({ mode: 'new' })
   const [codexReady, setCodexReady] = useState(false)
@@ -89,6 +90,11 @@ export default function ConfirmPage(): React.JSX.Element {
   useEffect(() => {
     const keyboard = (event: KeyboardEvent) => {
       if (event.isComposing || event.defaultPrevented || sendingLock.current) return
+      // 菜单优先处理快捷键，Esc 只收起菜单，不能取消整批记录。
+      if (targetMenuOpen) {
+        if (event.key === 'Escape') { event.preventDefault(); setTargetMenuOpen(false) }
+        return
+      }
       if (event.key === 'Escape') {
         event.preventDefault()
         if (view !== 'compact') setView('compact')
@@ -109,7 +115,7 @@ export default function ConfirmPage(): React.JSX.Element {
   return <ConfigProvider button={{ autoInsertSpace: false }}><div className="confirm-root">
     <header className="confirm-titlebar drag-region">
       {view !== 'compact' && !done && <Button type="text" size="small" className="confirm-back" icon={<ArrowLeftOutlined />} onClick={() => setView('compact')}>返回</Button>}
-      <h1 aria-label={title}>{view === 'compact' && !done && targets.length > 1 ? <Dropdown trigger={['click']} disabled={sending} menu={{ selectedKeys: [targetId], items: targets.map((item) => ({ key: item.id, label: <span className="target-menu-label"><TargetIcon target={item} size={16} />{appLabel(item)}{!item.available ? ' · 未安装' : ''}</span>, disabled: !item.available })), onClick: ({ key }) => { setTargetId(key); setError('') } }}><button className="title-app-switch" aria-label={`更换目标应用，当前 ${label}`}>{title}<DownOutlined /></button></Dropdown> : title}</h1>
+      <h1 aria-label={title}>{view === 'compact' && !done && targets.length > 1 ? <Dropdown trigger={['click']} disabled={sending} open={targetMenuOpen} onOpenChange={setTargetMenuOpen} menu={{ selectedKeys: [targetId], items: targets.map((item) => ({ key: item.id, label: <span className="target-menu-label"><TargetIcon target={item} size={16} />{appLabel(item)}{!item.available ? ' · 未安装' : ''}</span>, disabled: !item.available })), onClick: ({ key }) => { setTargetId(key); setTargetMenuOpen(false); setError('') } }}><button className="title-app-switch" aria-label={`更换目标应用，当前 ${label}`}>{title}<DownOutlined /></button></Dropdown> : title}</h1>
       {view === 'compact' && !done && job && <Button type="text" className="confirm-more" icon={<EllipsisOutlined />} aria-label="转发选项" disabled={sending} onClick={() => setView('options')} />}
     </header>
 

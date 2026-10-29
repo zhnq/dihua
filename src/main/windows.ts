@@ -4,23 +4,36 @@ import { join } from 'node:path'
 let mainWindow: BrowserWindow | null = null
 const confirmWindows = new Map<string, BrowserWindow>()
 
-/** 与 antd 默认主题的 colorBgContainer 一致，避免窗口出现时闪白/闪黑 */
+/** 系统关闭透明效果时，窗口与内容层使用相同的实色底。 */
 function ground(): string {
-  return nativeTheme.shouldUseDarkColors ? '#141414' : '#FFFFFF'
+  return nativeTheme.shouldUseDarkColors ? '#202022' : '#f5f5f7'
 }
 
 function baseOptions(): Electron.BrowserWindowConstructorOptions {
+  const glass = process.platform === 'darwin' && !nativeTheme.prefersReducedTransparency
   return {
     show: false,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 14, y: 14 },
-    backgroundColor: ground(),
+    backgroundColor: glass ? '#00000000' : ground(),
+    vibrancy: glass ? 'under-window' : undefined,
+    visualEffectState: 'followWindow',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
     },
+  }
+}
+
+/** 系统外观及「减少透明度」变更时，也更新已经打开的窗口。 */
+export function syncWindowMaterials(): void {
+  const glass = process.platform === 'darwin' && !nativeTheme.prefersReducedTransparency
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (win.isDestroyed()) continue
+    if (process.platform === 'darwin') win.setVibrancy(glass ? 'under-window' : null)
+    win.setBackgroundColor(glass ? '#00000000' : ground())
   }
 }
 
@@ -67,7 +80,6 @@ export function showConfirmWindow(jobId: string): BrowserWindow {
   }
   const win = new BrowserWindow({
     ...baseOptions(),
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#202022' : '#ffffff',
     width: 560,
     height: 430,
     minWidth: 520,

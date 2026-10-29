@@ -88,6 +88,7 @@ export default function MainLayout(): React.JSX.Element {
 
   return (
     <Layout
+      className={`main-shell${dragging ? ' is-dragging' : ''}`}
       style={{ height: '100vh', outline: dragging ? `2px dashed ${token.colorPrimary}` : 'none', outlineOffset: -6 }}
       onDragOver={(e) => {
         e.preventDefault()
@@ -103,29 +104,29 @@ export default function MainLayout(): React.JSX.Element {
         collapsed={collapsed}
         trigger={null}
         theme="light"
-        style={{ borderInlineEnd: `1px solid ${token.colorBorderSecondary}` }}
+        className="main-sidebar"
       >
         {/* 标题行：红绿灯在左边，收起按钮靠右；收起后按钮挪到内容区标题行，避开红绿灯。
             用普通 div 而不是 antd Flex：Flex 没有子节点时会被渲染成 0 高，标题行就没了 */}
-        <div className="drag-region" style={{ height: 38, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingInlineEnd: 8 }}>
+        <div className="drag-region sidebar-titlebar">
           {!collapsed && toggleButton}
         </div>
         <Menu mode="inline" selectedKeys={[current.key]} items={TABS} onClick={(e) => navigate(e.key)} style={{ borderInlineEnd: 0 }} />
         {!collapsed && (
-          <Typography.Text type="secondary" style={{ position: 'absolute', bottom: 16, left: 24, fontSize: 12, whiteSpace: 'nowrap' }}>
+          <Typography.Text type="secondary" className="sidebar-caption">
             把微信里的话，递给任何 AI
           </Typography.Text>
         )}
       </Sider>
-      <Layout>
-        <div className="drag-region" style={{ height: 38, flex: '0 0 38px', display: 'flex', alignItems: 'center', paddingInlineStart: 8 }}>
+      <Layout className="main-panel">
+        <header className="drag-region main-titlebar">
           {collapsed && toggleButton}
-        </div>
-        <Content style={{ padding: '0 24px 24px', overflow: 'auto' }}>
-          <Typography.Title level={2} style={{ marginTop: 0 }}>
-            {current.label}
-          </Typography.Title>
-          <Outlet />
+          <h1>{current.label}</h1>
+        </header>
+        <Content className="main-content">
+          <div className="page-content" key={current.key}>
+            <Outlet />
+          </div>
         </Content>
       </Layout>
     </Layout>

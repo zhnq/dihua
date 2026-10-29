@@ -158,6 +158,7 @@ export default function HistoryPage(): React.JSX.Element {
 
       {jobs.length === 0 ? (
         <Empty
+          className="history-empty glass-surface"
           style={{ padding: '56px 0' }}
           description={
             <Space direction="vertical" size={4}>
@@ -174,10 +175,10 @@ export default function HistoryPage(): React.JSX.Element {
         </Empty>
       ) : (
         <List
+          className="history-list glass-surface"
           bordered
           dataSource={jobs}
           rowKey="id"
-          style={{ background: token.colorBgContainer }}
           pagination={{
             current: page,
             pageSize,
@@ -198,7 +199,7 @@ export default function HistoryPage(): React.JSX.Element {
             return (
               <List.Item
                 className="history-item"
-                style={{ padding: '12px 16px', alignItems: 'flex-start', ['--history-hover' as string]: token.colorFillQuaternary }}
+                style={{ padding: '14px 16px', alignItems: 'flex-start' }}
                 actions={[
                   job.status === 'pending' ? (
                     <Button key="send" type="primary" ghost size="small" icon={<SendOutlined />} onClick={() => window.dihua.jobs.openConfirm(job.id)}>
@@ -245,7 +246,7 @@ export default function HistoryPage(): React.JSX.Element {
                   }
                   description={
                     <Space direction="vertical" size={2}>
-                      <Space split={<Divider type="vertical" />} size={4} style={{ fontSize: 12 }}>
+                      <Space split={<Divider type="vertical" />} size={4} wrap style={{ fontSize: 12 }}>
                         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                           {when(job.createdAt)}
                         </Typography.Text>

@@ -14,8 +14,8 @@ const CYCLE = 8
 const dur = `${CYCLE}s`
 const kt = (...secs: number[]): string => secs.map((s) => Math.min(1, Math.max(0, s / CYCLE))).join(';')
 
-const LIGHT = { bg: '#ffffff', side: '#f5f5f5', line: '#e5e5e5', text: '#8c8c8c', accent: '#1677ff' }
-const DARK = { bg: '#141414', side: '#1f1f1f', line: '#303030', text: '#595959', accent: '#4096ff' }
+const LIGHT = { bg: '#fbfbfd', side: '#e8e9ef', line: '#e0e1e7', text: '#74747b', accent: '#006be6' }
+const DARK = { bg: '#27272b', side: '#34343c', line: '#44444c', text: '#b4b4bc', accent: '#78b6ff' }
 const LINES = [
   { x: 44, y: 12, w: 40, h: 6, strong: true },
   { x: 44, y: 26, w: 64, h: 4 },
@@ -231,7 +231,6 @@ const OPTIONS: Array<{ mode: ThemeMode; label: string; detail: string }> = [
 ]
 
 export default function ThemePicker({ value, onChange }: { value: ThemeMode; onChange: (mode: ThemeMode) => void }): React.JSX.Element {
-  const { token } = theme.useToken()
   const motion = useMotion()
   return (
     <Flex gap={12} wrap role="radiogroup" aria-label="外观">
@@ -246,21 +245,21 @@ export default function ThemePicker({ value, onChange }: { value: ThemeMode; onC
             className="theme-option"
             onClick={() => onChange(o.mode)}
             onKeyDown={(e) => {
-              if (e.key === ' ' || e.key === 'Enter') onChange(o.mode)
+              if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault()
+                onChange(o.mode)
+              }
             }}
             style={{
-              flex: '1 1 140px',
+              flex: '1 1 0',
               minWidth: 0,
               padding: 6,
-              borderRadius: token.borderRadiusLG,
-              background: token.colorBgContainer,
-              boxShadow: selected ? `0 0 0 2px ${token.colorPrimary}` : `inset 0 0 0 1px ${token.colorBorderSecondary}`,
               cursor: 'default',
             }}
           >
             <Preview mode={o.mode} motion={motion} selected={selected} />
             <div style={{ padding: '8px 6px 2px', minWidth: 0 }}>
-              <Typography.Text strong style={{ display: 'block', fontSize: 13, color: selected ? token.colorPrimary : undefined }}>
+              <Typography.Text strong style={{ display: 'block', fontSize: 13, color: selected ? 'var(--accent)' : undefined }}>
                 {o.label}
               </Typography.Text>
               <Typography.Text type="secondary" style={{ fontSize: 11 }}>

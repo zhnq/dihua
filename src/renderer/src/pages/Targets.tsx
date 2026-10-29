@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { App as AntApp, Button, Card, Flex, List, Space, Switch, Tag, Typography, theme } from 'antd'
+import { App as AntApp, Button, Card, Flex, List, Space, Switch, Tag, Typography } from 'antd'
 import { AppstoreOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { Settings, TargetInfo } from '@shared/types'
 import { TargetIcon } from '../components/TargetIcon'
@@ -7,7 +7,6 @@ import { TargetIcon } from '../components/TargetIcon'
 /** 递话能递给哪些 AI 应用：每个一行，右侧开关决定它出不出现在确认窗里。 */
 export default function TargetsPage(): React.JSX.Element {
   const { message } = AntApp.useApp()
-  const { token } = theme.useToken()
   const [targets, setTargets] = useState<TargetInfo[]>([])
   const [settings, setSettings] = useState<Settings | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -41,7 +40,7 @@ export default function TargetsPage(): React.JSX.Element {
 
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-      <Typography.Paragraph type="secondary" style={{ marginTop: -8 }}>
+      <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
         递话把整理好的聊天记录交给这些应用。关掉的不会出现在投递确认窗里。
       </Typography.Paragraph>
 
@@ -65,13 +64,13 @@ export default function TargetsPage(): React.JSX.Element {
           renderItem={(t) => {
             const isDefault = settings?.defaultTargetId === t.id && t.enabled
             return (
-              <List.Item style={{ padding: '14px 0', opacity: t.enabled ? 1 : 0.55, transition: 'opacity 0.15s' }}>
+              <List.Item className="target-row" style={{ padding: '14px 0', opacity: t.enabled ? 1 : 0.65 }}>
                 <Flex align="center" gap={14} style={{ width: '100%' }}>
                   {/* 图标：带浅底的方块，和记录页头像同尺寸 */}
                   <Flex
                     align="center"
                     justify="center"
-                    style={{ width: 40, height: 40, borderRadius: token.borderRadius, background: token.colorFillQuaternary, flex: '0 0 auto' }}
+                    className="app-icon-tile"
                   >
                     <TargetIcon target={t} size={22} />
                   </Flex>
@@ -93,7 +92,7 @@ export default function TargetsPage(): React.JSX.Element {
                     </Typography.Text>
                   </Flex>
 
-                  <Space size="middle">
+                  <Space size="middle" className="target-row-actions">
                     {t.enabled && !isDefault && (
                       <Button size="small" disabled={!t.available} onClick={() => setDefault(t)}>
                         设为默认

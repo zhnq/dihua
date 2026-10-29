@@ -35,6 +35,8 @@ const api = {
   theme: {
     isDark: (): Promise<boolean> => ipcRenderer.invoke('theme:isDark'),
     onChange: (cb: (dark: boolean) => void) => on('theme:changed', (d) => cb(Boolean(d))),
+    isReducedTransparency: (): Promise<boolean> => ipcRenderer.invoke('theme:isReducedTransparency'),
+    onTransparencyChange: (cb: (reduced: boolean) => void) => on('theme:transparencyChanged', (r) => cb(Boolean(r))),
   },
   files: {
     /** Electron 32 起 File.path 已移除，拖拽导入要经 webUtils 取真实路径 */

@@ -7,7 +7,7 @@ import { registerIpc } from './ipc'
 import { getSettings } from './store'
 import { describeTargets } from './targets/registry'
 import { scheduleAutoCheck } from './update'
-import { broadcast, hasVisibleWindows, showConfirmWindow, showMainWindow } from './windows'
+import { broadcast, hasVisibleWindows, showConfirmWindow, showMainWindow, syncWindowMaterials } from './windows'
 import log from './log'
 
 // 文件系统里用英文名（~/Library/Application Support/dihua、~/Library/Logs/dihua），开发态与打包态共用
@@ -119,7 +119,11 @@ app.whenReady().then(async () => {
       .catch((err) => log.warn('[entries] sync failed', err))
   }
 
-  nativeTheme.on('updated', () => broadcast('theme:changed', nativeTheme.shouldUseDarkColors))
+  nativeTheme.on('updated', () => {
+    syncWindowMaterials()
+    broadcast('theme:changed', nativeTheme.shouldUseDarkColors)
+    broadcast('theme:transparencyChanged', nativeTheme.prefersReducedTransparency)
+  })
 
   const argvZips = process.argv.slice(1).filter((a) => a.toLowerCase().endsWith('.zip'))
   const files: Array<[string, 'open-with' | 'argv']> = [

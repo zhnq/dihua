@@ -60,12 +60,7 @@ export default function AboutPage(): React.JSX.Element {
         vertical
         align="center"
         gap={12}
-        style={{
-          padding: '20px 24px 28px',
-          borderRadius: token.borderRadiusLG,
-          background: `linear-gradient(180deg, ${token.colorPrimaryBg} 0%, ${token.colorBgContainer} 100%)`,
-          border: `1px solid ${token.colorBorderSecondary}`,
-        }}
+        className="about-brand glass-surface"
       >
         <BrandFlow />
         <Flex vertical align="center" gap={2}>

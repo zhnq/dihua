@@ -7,7 +7,7 @@ import ThemePicker from '../components/ThemePicker'
 
 function Row({ title, detail, mono, children }: { title: string; detail?: string; mono?: boolean; children: React.ReactNode }): React.JSX.Element {
   return (
-    <List.Item>
+    <List.Item className="settings-row">
       <List.Item.Meta
         title={title}
         description={
@@ -22,7 +22,7 @@ function Row({ title, detail, mono, children }: { title: string; detail?: string
           ) : undefined
         }
       />
-      <Space>{children}</Space>
+      <Space className="settings-row-actions" wrap>{children}</Space>
     </List.Item>
   )
 }
@@ -52,7 +52,7 @@ export default function GeneralPage(): React.JSX.Element {
 
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-      <SvgCard title="外观" icon={<BgColorsOutlined />} decor="blobs">
+      <SvgCard title="外观" icon={<BgColorsOutlined />} decor="none">
         <ThemePicker value={settings.themeMode} onChange={(mode) => patch({ themeMode: mode })} />
       </SvgCard>
 

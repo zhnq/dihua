@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { Button, Card, Flex, Space, Spin, Switch, Tag, Typography, theme } from 'antd'
+import { Button, Card, Flex, Space, Spin, Switch, Tag, Typography } from 'antd'
 import { BulbOutlined, SettingOutlined } from '@ant-design/icons'
 import type { ShareEntriesInfo, ShareEntryState } from '@shared/types'
 import EntryIllustration from '../components/EntryIllustration'
@@ -13,7 +13,6 @@ const STATE: Record<ShareEntryState, { color: string; text: string }> = {
 
 /** 微信「转发到其他应用 → 选择电脑中的应用」读的是系统共享菜单；这里的开关写的就是那个设置。 */
 export default function EntriesPage(): React.JSX.Element {
-  const { token } = theme.useToken()
   const [state, setState] = useState<ShareEntryState | null>(null)
   const [info, setInfo] = useState<ShareEntriesInfo | null>(null)
   const [busy, setBusy] = useState(false)
@@ -74,7 +73,7 @@ export default function EntriesPage(): React.JSX.Element {
               </Typography.Paragraph>
               {info?.direct && (
                 <Typography.Paragraph type="secondary" style={{ margin: '6px 0 0', fontSize: 12 }}>
-                  开了「收到记录后直接递出去」，所以入口按目标应用分开列出：点哪个就直接递给哪个，不弹确认窗。
+                  入口按目标应用分开列出，点哪个就递给哪个；选择已有 Codex 会话时仍会弹窗确认。
                 </Typography.Paragraph>
               )}
             </div>
@@ -94,12 +93,7 @@ export default function EntriesPage(): React.JSX.Element {
           <Flex
             align="center"
             justify="center"
-            style={{
-              flex: '0 0 260px',
-              padding: '16px 12px',
-              background: `linear-gradient(135deg, ${token.colorPrimaryBg} 0%, ${token.colorBgLayout} 100%)`,
-              borderInlineStart: `1px solid ${token.colorBorderSecondary}`,
-            }}
+            className="entry-illustration-panel"
           >
             <EntryIllustration state={state} />
           </Flex>

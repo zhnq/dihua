@@ -4,11 +4,11 @@
 
 <h1 align="center">Dihua · 递话</h1>
 
-> This fork adds an existing Codex conversation picker, workspace attachment copies, and optional CLI queue delivery. [Usage and requirements](docs/codex-conversations.md). Based on [ZHlovecat/dihua](https://github.com/ZHlovecat/dihua).
+> First, thank you to [ZHlovecat/dihua](https://github.com/ZHlovecat/dihua) and its author [@ZHlovecat](https://github.com/ZHlovecat) for making Dihua open source. The WeChat share extension, export-to-workspace pipeline, and multi-app handoff build on that work. This community fork focuses on Codex conversation selection, nested records, and transfer confirmation, while retaining the original MIT license and copyright notice.
 
 <p align="center">
   <b>Hand your WeChat chats to any AI.</b><br>
-  Select messages in WeChat for Mac, forward them to Dihua, and they land in ChatGPT, Claude or Gemini — files, images and a ready-made prompt included.
+  Forward messages from WeChat for Mac, then hand the text, images and files to Codex, Claude or Gemini in a readable workspace.
 </p>
 
 <p align="center">
@@ -16,23 +16,76 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ZHlovecat/dihua/releases"><img src="https://img.shields.io/github/v/release/ZHlovecat/dihua?label=release" alt="Release"></a>
-  <a href="https://github.com/ZHlovecat/dihua/actions/workflows/ci.yml"><img src="https://github.com/ZHlovecat/dihua/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/zhnq/dihua/releases"><img src="https://img.shields.io/github/v/release/zhnq/dihua?label=release" alt="Fork release"></a>
   <img src="https://img.shields.io/badge/platform-macOS%2013%2B-blue" alt="macOS 13+">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/ZHlovecat/dihua" alt="MIT"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/zhnq/dihua" alt="MIT"></a>
 </p>
+
+## Download 0.0.4
+
+**[Download for Apple Silicon (arm64 DMG)](https://github.com/zhnq/dihua/releases/download/v0.0.4/Dihua-0.0.4-arm64.dmg)** · [0.0.4 release notes](https://github.com/zhnq/dihua/releases/tag/v0.0.4) · [SHA-256 checksum](https://github.com/zhnq/dihua/releases/download/v0.0.4/Dihua-0.0.4-arm64.dmg.sha256)
+
+For Apple Silicon Macs running macOS 13 or later. **This release provides an arm64 installer only; an Intel x64 build is not included.** See [Install](#install) for setup.
+
+## What this fork changes
+
+The upstream project provides the complete flow from WeChat sharing and ZIP extraction to a local workspace and multiple AI apps. Version 0.0.4 adds or improves:
+
+| Change | Behavior in 0.0.4 |
+|---|---|
+| **Choose an existing Codex conversation** | Search conversations, choose a recent one or start a new one. Existing destinations receive an independent batch copy in their workspace. |
+| **Preserve nested chat records** | Parse indentation recursively, retaining inner speakers, timestamps and attachment links. Count outer and inner messages separately. |
+| **Redesigned confirmation window** | Keep the source summary and destination prominent, with search and preview on demand. Support keyboard selection, Command-Return, dark appearance and reduced motion. |
+| **Per-handoff notes** | Add a task such as summarizing or extracting action items. The note travels with this batch and is not saved as a default task. |
+| **Content and attachment preview** | Inspect message hierarchy, real photo thumbnails and files. Locate an attachment in Finder and press Space for Quick Look. |
+| **Clear status and recovery** | Distinguish waiting for paste from queued. Copy again or reopen the destination without resubmitting. Report missing content and parsing limits. |
+
+Existing conversations default to **Copy and open conversation** so you can paste, review and send. Direct queue submission remains experimental in Transfer Options. See [Codex conversation usage and requirements](docs/codex-conversations.md) for details.
+
+## Updated interface
+
+These are actual screenshots of the installed 0.0.4 app using synthetic test data. The warning demonstrates an export containing a nested placeholder without its internal body.
+
+**Compact confirmation: review the batch and destination before handing it over.**
+
+<p align="center">
+  <img src="docs/assets/screenshots/v0.0.4-confirm.jpg" width="560" alt="0.0.4 compact confirmation with source summary, destination, optional note and copy-and-open action">
+</p>
+
+<details>
+<summary>More screenshots: conversation search, content preview and optional notes</summary>
+
+**Search an existing Codex conversation or create a new one.**
+
+<p align="center">
+  <img src="docs/assets/screenshots/v0.0.4-conversations.jpg" width="560" alt="0.0.4 conversation search showing a matching conversation and the new-conversation action">
+</p>
+
+**Expand the batch to review messages, photos, files and content notices.**
+
+<p align="center">
+  <img src="docs/assets/screenshots/v0.0.4-content.jpg" width="760" alt="0.0.4 content preview with messages, real photo thumbnail, file list and a missing-body notice">
+</p>
+
+**Add instructions for this handoff only.**
+
+<p align="center">
+  <img src="docs/assets/screenshots/v0.0.4-note.jpg" width="560" alt="0.0.4 optional note field for instructions before handoff">
+</p>
+
+</details>
+
+## Why Dihua
 
 <p align="center">
   <img src="docs/assets/hero.svg" width="960" alt="WeChat → Dihua → ChatGPT / Claude / Gemini">
 </p>
 
-## Why Dihua
+WeChat for Mac (4.1.13+) can export selected messages to other apps as a ZIP. Dihua receives that export through a macOS Share Extension, organizes the messages and attachments locally, and prepares a handoff to your AI app, saving the manual extraction and file organization.
 
-WeChat for Mac (4.1.13+) can forward a batch of messages to "other apps" as a zip — but the only apps allowed in that menu are Tencent's own. Dihua puts a real entry there. Pick the messages, forward, and a moment later your favourite AI desktop app opens with the whole conversation in front of it.
-
-- **One gesture.** Multi-select → Forward → Other apps → *Dihua*. Done.
-- **The AI can actually read it.** The zip is unpacked into a tidy workspace: `transcript.md` (time-sorted, speakers marked), the images and videos, and a `meta.json`. Each target app gets it the way it can consume it best.
-- **You stay in charge.** Dihua only pre-fills *where the record is and what it is*. What to do with it — summarise, extract to-dos, translate — you say in the AI app, then press Enter.
+- **Start from WeChat.** Multi-select → Forward → Other apps → *Dihua*, then confirm the destination.
+- **The AI can actually read it.** The ZIP becomes a local workspace: `transcript.md` retains message order, speakers and nested structure, with separate media/files and `meta.json` metadata. Each target receives the format it supports.
+- **You stay in charge.** Add your task in the confirmation window or continue in the AI app. Existing Codex conversations default to manual paste, review and send.
 - **Nothing leaves your Mac through Dihua.** No accounts, no servers, no telemetry. The AI apps talk to their own backends exactly as they always do.
 
 ## How it works
@@ -48,13 +101,10 @@ WeChat for Mac (4.1.13+) can forward a batch of messages to "other apps" as a zi
      <img src="docs/assets/screenshots/wechat-forward-menu.png" width="640" alt="WeChat: Forward to other apps → Choose an app on this Mac → Dihua">
    </p>
 
-3. **Say what you want.** Dihua opens the target app with the record attached and a short prompt pre-filled. Type your request, press Enter.
+3. **Confirm the destination.** Review the summary, choose a Codex conversation, and optionally expand the preview or add a note.
+4. **Hand off and send.** For an existing Codex conversation, choose **Copy and open conversation**, then press Command-V in the destination, review and press Return. For a new conversation or another target, follow the completion view's instructions.
 
-<p align="center">
-  <img src="docs/assets/screenshots/light-confirm.png" width="640" alt="Delivery confirmation window">
-</p>
-
-Prefer zero clicks? Enable **Send directly** and the forward menu lists each target on its own — *Send to ChatGPT*, *Send to Claude*, *Send to Gemini* — with no confirmation window in between.
+The original **Send directly** setting remains available for new conversations and other targets. Existing Codex destinations always show confirmation.
 
 ## Transfer confirmation
 
@@ -74,7 +124,7 @@ The fix applies to newly imported batches; existing batches are not rewritten au
 
 | Target | How the record arrives |
 |---|---|
-| **ChatGPT desktop (Codex)** | Opens a new thread with your Dihua workspace as the project; the prompt is pre-filled. Codex reads `transcript.md` and the images itself. |
+| **Codex (ChatGPT desktop)** | Opens a new conversation with a pre-filled prompt, or copies the batch into a selected existing conversation's workspace. Codex reads `transcript.md` and the attachments. |
 | **Claude desktop (Cowork)** | Opens a new Cowork task with the workspace folder attached and the prompt pre-filled. |
 | **Gemini desktop** | Drops `transcript.md` and up to 9 images/files into the composer as attachments; the prompt is copied to your clipboard — paste and send. |
 
@@ -84,25 +134,32 @@ The fix applies to newly imported batches; existing batches are not rewritten au
 
 ## Install
 
-1. Download the dmg for your Mac from [Releases](https://github.com/ZHlovecat/dihua/releases) — `arm64` for Apple Silicon, `x64` for Intel — and drag Dihua to *Applications*.
-2. Builds are ad-hoc signed, not notarised. If macOS refuses to open it the first time, right-click *Dihua.app → Open*, or run:
-   ```bash
-   xattr -d com.apple.quarantine /Applications/Dihua.app
-   ```
+1. Download [Dihua-0.0.4-arm64.dmg](https://github.com/zhnq/dihua/releases/download/v0.0.4/Dihua-0.0.4-arm64.dmg), open it, and drag *Dihua.app* into *Applications*.
+2. The app is ad-hoc signed and has not been notarised by Apple. If macOS blocks the first launch, verify the download source and follow the system's security prompts to allow opening it manually.
 3. Launch Dihua once. It registers the share entry automatically; if WeChat's menu still doesn't show it, enable *Dihua* under *System Settings → General → Login Items & Extensions → Extensions → Sharing*.
 
 **Requirements:** macOS 13 Ventura or later · WeChat for Mac 4.1.13 or later · at least one of ChatGPT, Claude or Gemini desktop apps.
 
-**Updates:** *About → Check for updates* looks at GitHub Releases and links to the download. Dihua also checks once a day on launch and notifies you when a new version is out.
+Existing Codex conversation selection also requires a working local Codex CLI; creating a new conversation does not. See the [usage guide](docs/codex-conversations.md).
+
+To verify the installer, download the [DMG](https://github.com/zhnq/dihua/releases/download/v0.0.4/Dihua-0.0.4-arm64.dmg) and [checksum file](https://github.com/zhnq/dihua/releases/download/v0.0.4/Dihua-0.0.4-arm64.dmg.sha256) into the same directory, then run:
+
+```sh
+shasum -a 256 -c Dihua-0.0.4-arm64.dmg.sha256
+```
+
+**Updates:** *About → Check for updates* reads [this fork's Releases](https://github.com/zhnq/dihua/releases) and links to the download. Dihua also checks once a day on launch and notifies you when a new version is out.
 
 ## What you get on disk
 
 ```
 ~/Documents/dihua/
 └── inbox/20260907-231000-Project group/
-    ├── transcript.md     # time-sorted, speakers marked, images linked
-    ├── meta.json         # counts, time range, parse confidence
+    ├── transcript.md     # message order, speakers, nesting and attachment links
+    ├── transcript.json   # structured messages and nesting relationships
+    ├── meta.json         # counts, time range, parse confidence and nesting summary
     ├── 媒体/             # images & videos (+ .thumb.png for videos)
+    ├── 文件/             # other attachments
     └── 原始/             # the original zip and txt from WeChat
 ```
 
@@ -110,13 +167,11 @@ Records are listed in Dihua's *History*; you can re-send, reveal in Finder, or d
 
 <p align="center">
   <img src="docs/assets/screenshots/light-general.png" width="760" alt="General settings, light">
-  <br>
-  <img src="docs/assets/screenshots/dark-confirm.png" width="640" alt="Confirmation window, dark">
 </p>
 
 ## Acknowledgements
 
-Thanks to the [LINUX DO](https://linux.do/) community for the support and feedback.
+Thanks to [ZHlovecat/dihua](https://github.com/ZHlovecat/dihua) and its author for the upstream work, and to the [LINUX DO](https://linux.do/) community for support and feedback. The original license and copyright notice remain in [LICENSE](LICENSE).
 
 ## License
 

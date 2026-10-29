@@ -21,18 +21,19 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/zhnq/dihua" alt="MIT"></a>
 </p>
 
-## Download 0.0.4
+## Download 0.0.5
 
-**[Download for Apple Silicon (arm64 DMG)](https://github.com/zhnq/dihua/releases/download/v0.0.4/Dihua-0.0.4-arm64.dmg)** · [0.0.4 release notes](https://github.com/zhnq/dihua/releases/tag/v0.0.4) · [SHA-256 checksum](https://github.com/zhnq/dihua/releases/download/v0.0.4/Dihua-0.0.4-arm64.dmg.sha256)
+**[Download for Apple Silicon (arm64 DMG)](https://github.com/zhnq/dihua/releases/download/v0.0.5/Dihua-0.0.5-arm64.dmg)** · [0.0.5 release notes](https://github.com/zhnq/dihua/releases/tag/v0.0.5) · [SHA-256 checksum](https://github.com/zhnq/dihua/releases/download/v0.0.5/Dihua-0.0.5-arm64.dmg.sha256)
 
 For Apple Silicon Macs running macOS 13 or later. **This release provides an arm64 installer only; an Intel x64 build is not included.** See [Install](#install) for setup.
 
 ## What this fork changes
 
-The upstream project provides the complete flow from WeChat sharing and ZIP extraction to a local workspace and multiple AI apps. Version 0.0.4 adds or improves:
+The upstream project provides the complete flow from WeChat sharing and ZIP extraction to a local workspace and multiple AI apps. Version 0.0.5 unifies glass materials across the main window and share dialog, and fixes Escape handling in the target menu. This table summarizes the fork’s enhancements over upstream:
 
-| Change | Behavior in 0.0.4 |
+| Change | Behavior in 0.0.5 |
 |---|---|
+| **Consistent glass interface** | General, Entries, Targets, History, About and the share dialog use the same materials, typography and controls, with light/dark appearance, narrow-window layouts and reduced-transparency support. |
 | **Choose an existing Codex conversation** | Search conversations, choose a recent one or start a new one. Existing destinations receive an independent batch copy in their workspace. |
 | **Preserve nested chat records** | Parse indentation recursively, retaining inner speakers, timestamps and attachment links. Count outer and inner messages separately. |
 | **Redesigned confirmation window** | Keep the source summary and destination prominent, with search and preview on demand. Support keyboard selection, Command-Return, dark appearance and reduced motion. |
@@ -44,12 +45,18 @@ Existing conversations default to **Copy and open conversation** so you can past
 
 ## Updated interface
 
-These are actual screenshots of the installed 0.0.4 app using synthetic test data. The warning demonstrates an export containing a nested placeholder without its internal body.
+These are actual 0.0.5 screenshots from an isolated demo environment with synthetic chat content. The warning demonstrates an export containing a nested placeholder without its internal body.
+
+**The main window: soft glass materials with clear content cards.**
+
+<p align="center">
+  <img src="docs/assets/screenshots/v0.0.5-general.jpg" width="780" alt="0.0.5 General page with a glass sidebar, unified titlebar, appearance picker and settings cards">
+</p>
 
 **Compact confirmation: review the batch and destination before handing it over.**
 
 <p align="center">
-  <img src="docs/assets/screenshots/v0.0.4-confirm.jpg" width="560" alt="0.0.4 compact confirmation with source summary, destination, optional note and copy-and-open action">
+  <img src="docs/assets/screenshots/v0.0.5-confirm.jpg" width="560" alt="0.0.5 compact confirmation with source summary, destination, optional note and copy-and-open action">
 </p>
 
 <details>
@@ -58,19 +65,42 @@ These are actual screenshots of the installed 0.0.4 app using synthetic test dat
 **Search an existing Codex conversation or create a new one.**
 
 <p align="center">
-  <img src="docs/assets/screenshots/v0.0.4-conversations.jpg" width="560" alt="0.0.4 conversation search showing a matching conversation and the new-conversation action">
+  <img src="docs/assets/screenshots/v0.0.5-conversations.jpg" width="560" alt="0.0.5 conversation search showing a matching conversation and the new-conversation action">
 </p>
 
 **Expand the batch to review messages, photos, files and content notices.**
 
 <p align="center">
-  <img src="docs/assets/screenshots/v0.0.4-content.jpg" width="760" alt="0.0.4 content preview with messages, real photo thumbnail, file list and a missing-body notice">
+  <img src="docs/assets/screenshots/v0.0.5-content.jpg" width="760" alt="0.0.5 content preview with messages, real photo thumbnail, file list and a missing-body notice">
 </p>
 
 **Add instructions for this handoff only.**
 
 <p align="center">
-  <img src="docs/assets/screenshots/v0.0.4-note.jpg" width="560" alt="0.0.4 optional note field for instructions before handoff">
+  <img src="docs/assets/screenshots/v0.0.5-note.jpg" width="560" alt="0.0.5 optional note field for instructions before handoff">
+</p>
+
+</details>
+
+<details>
+<summary>More main-window views: dark appearance, History and About</summary>
+
+**Dark appearance keeps the same materials and reading hierarchy.**
+
+<p align="center">
+  <img src="docs/assets/screenshots/v0.0.5-general-dark.jpg" width="780" alt="0.0.5 dark General page with neutral glass surfaces, readable text and blue selection">
+</p>
+
+**History: forward from WeChat or drag in an exported ZIP.**
+
+<p align="center">
+  <img src="docs/assets/screenshots/v0.0.5-history.jpg" width="780" alt="0.0.5 History page showing the empty state in an isolated demo environment">
+</p>
+
+**About: check your version, updates and file locations.**
+
+<p align="center">
+  <img src="docs/assets/screenshots/v0.0.5-about.jpg" width="780" alt="0.0.5 About page with branding, current version and update controls">
 </p>
 
 </details>
@@ -91,7 +121,7 @@ WeChat for Mac (4.1.13+) can export selected messages to other apps as a ZIP. Di
 ## How it works
 
 <p align="center">
-  <img src="docs/assets/screenshots/light-entries.png" width="760" alt="Dihua shows up in WeChat's forward menu">
+  <img src="docs/assets/screenshots/v0.0.5-entries.jpg" width="780" alt="0.0.5 Entries page with WeChat sharing status and usage steps">
 </p>
 
 1. **Turn on the entry.** Dihua registers a macOS Share Extension; WeChat's *Forward → Other apps → Choose an app on this Mac* lists it.
@@ -108,7 +138,7 @@ The original **Send directly** setting remains available for new conversations a
 
 ## Transfer confirmation
 
-The compact confirmation window keeps the source summary and destination visible, with content preview, conversation search, optional notes and transfer options available on demand. Choose a recent or existing Codex conversation, or start a new one. Use arrow keys and Return in search, Escape to return, and Command-Return to hand off from the note field.
+The compact confirmation window keeps the source summary and destination visible, with content preview, conversation search, optional notes and transfer options available on demand. Choose a recent or existing Codex conversation, or start a new one. Use arrow keys and Return in search, Escape to return (or close an open target menu without cancelling the batch), and Command-Return to hand off from the note field.
 
 Existing conversations default to copying the prompt and opening the selected conversation for you to paste, review and send. Experimental direct queue submission is in Transfer Options. Persistent feedback distinguishes prepared from queued; copying again and reopening the destination do not resubmit. Notes apply to this handoff only. Content preview preserves nesting and shows real attachments; locate an attachment in Finder and press Space for Quick Look.
 
@@ -129,12 +159,12 @@ The fix applies to newly imported batches; existing batches are not rewritten au
 | **Gemini desktop** | Drops `transcript.md` and up to 9 images/files into the composer as attachments; the prompt is copied to your clipboard — paste and send. |
 
 <p align="center">
-  <img src="docs/assets/screenshots/light-targets.png" width="760" alt="Targets page">
+  <img src="docs/assets/screenshots/v0.0.5-targets.jpg" width="760" alt="0.0.5 Targets page with app detection, default destination and switches">
 </p>
 
 ## Install
 
-1. Download [Dihua-0.0.4-arm64.dmg](https://github.com/zhnq/dihua/releases/download/v0.0.4/Dihua-0.0.4-arm64.dmg), open it, and drag *Dihua.app* into *Applications*.
+1. Download [Dihua-0.0.5-arm64.dmg](https://github.com/zhnq/dihua/releases/download/v0.0.5/Dihua-0.0.5-arm64.dmg), open it, and drag *Dihua.app* into *Applications*.
 2. The app is ad-hoc signed and has not been notarised by Apple. If macOS blocks the first launch, verify the download source and follow the system's security prompts to allow opening it manually.
 3. Launch Dihua once. It registers the share entry automatically; if WeChat's menu still doesn't show it, enable *Dihua* under *System Settings → General → Login Items & Extensions → Extensions → Sharing*.
 
@@ -142,10 +172,10 @@ The fix applies to newly imported batches; existing batches are not rewritten au
 
 Existing Codex conversation selection also requires a working local Codex CLI; creating a new conversation does not. See the [usage guide](docs/codex-conversations.md).
 
-To verify the installer, download the [DMG](https://github.com/zhnq/dihua/releases/download/v0.0.4/Dihua-0.0.4-arm64.dmg) and [checksum file](https://github.com/zhnq/dihua/releases/download/v0.0.4/Dihua-0.0.4-arm64.dmg.sha256) into the same directory, then run:
+To verify the installer, download the [DMG](https://github.com/zhnq/dihua/releases/download/v0.0.5/Dihua-0.0.5-arm64.dmg) and [checksum file](https://github.com/zhnq/dihua/releases/download/v0.0.5/Dihua-0.0.5-arm64.dmg.sha256) into the same directory, then run:
 
 ```sh
-shasum -a 256 -c Dihua-0.0.4-arm64.dmg.sha256
+shasum -a 256 -c Dihua-0.0.5-arm64.dmg.sha256
 ```
 
 **Updates:** *About → Check for updates* reads [this fork's Releases](https://github.com/zhnq/dihua/releases) and links to the download. Dihua also checks once a day on launch and notifies you when a new version is out.
@@ -164,10 +194,6 @@ shasum -a 256 -c Dihua-0.0.4-arm64.dmg.sha256
 ```
 
 Records are listed in Dihua's *History*; you can re-send, reveal in Finder, or delete them (with files). Auto-cleanup is configurable.
-
-<p align="center">
-  <img src="docs/assets/screenshots/light-general.png" width="760" alt="General settings, light">
-</p>
 
 ## Acknowledgements
 
